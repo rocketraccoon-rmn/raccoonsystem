@@ -349,8 +349,9 @@ function draw(){
   if(PAGE==='accounts'){accountsTab();return}
   if(OV){overviewTab();return}
   const T=[['form',sheet+' Form','card-checklist'],['Pending','Pending','hourglass-split'],['Done','Done','check2-square'],['stats','Stats','bar-chart-line']];
-  $('tb').innerHTML=T.map(t=>'<li class="nav-item"><button class="nav-link'+(t[0]===tab?' active':'')+'" data-t="'+t[0]+'"><i class="bi bi-'+t[2]+' me-1"></i>'+t[1]+'</button></li>').join('');
+  $('tb').innerHTML=T.map(t=>'<li class="nav-item"><button class="nav-link'+(t[0]===tab?' active':'')+'" data-t="'+t[0]+'"><i class="bi bi-'+t[2]+' me-1"></i>'+t[1]+(t[0]==='Pending'?'<span class="badge text-bg-warning ms-2" id="pbadge" hidden></span>':'')+'</button></li>').join('');
   $('tb').querySelectorAll('button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;draw()});
+  pbadge();
   tab==='form'?form():tab==='Pending'?pendingTab():tab==='stats'?statsTab():listTab();
 }
 const tbar=t=>'<div class="tbar"><span class="dots"><b></b><b></b><b></b></span><span>'+t+'</span></div>';
@@ -453,13 +454,14 @@ async function getRows(s,force){
   const c=CACHE[s];
   if(c&&!force&&Date.now()-c.t<180000)return c.rows;
   const d=await api('list',{sheet:s,status:''});
-  CACHE[s]={rows:d.rows,t:Date.now()};return d.rows;
+  CACHE[s]={rows:d.rows,t:Date.now()};pbadge();return d.rows;
 }
 function addToCache(s,list,from){   // show new rows at once instead of reloading the whole sheet
   const c=CACHE[s];if(!c)return;
   const tc=SHEETS[s].right[0][0],sc=SHEETS[s].right.find(x=>x[2]==='st')[0];
-  list.forEach((p,i)=>c.rows.unshift({row:from+i,c:Object.assign({},p),date:p.C||'',teacher:p.F||'',subject:p.G||'',grade:p.H||'',section:p.I||'',title:p[tc]||'',status:p[sc]||''}));
+  pbadge();list.forEach((p,i)=>c.rows.unshift({row:from+i,c:Object.assign({},p),date:p.C||'',teacher:p.F||'',subject:p.G||'',grade:p.H||'',section:p.I||'',title:p[tc]||'',status:p[sc]||''}));
 }
+function pbadge(){const b=$('pbadge'),c=CACHE[sheet];if(!b)return;if(!c){b.hidden=true;return}b.textContent=c.rows.filter(r=>nz(r.status)==='pending').length;b.hidden=false}
 async function loadAll(force){DUP=await getRows(sheet,force)}
 function pfill(){
   PF.forEach(f=>{
@@ -473,19 +475,41 @@ async function pendingTab(){
   $('pane').innerHTML='<div class="cardx"><div class="p-3 pb-2"><div class="row g-2">'
    +'<div class="col-lg-4"><input type="text" class="form-control form-control-sm" id="pq" placeholder="Search pending title, teacher…"></div>'
    +PF.map(f=>'<div class="col-6 col-lg"><select class="form-select form-select-sm" id="pf_'+f[0]+'"><option value="">'+f[1]+': all</option></select></div>').join('')
-   +'</div></div><div class="px-3 pb-3 d-flex align-items-center gap-2 flex-wrap"><span class="lab mb-0 me-2" id="psc">0 selected</span>'
+   +'</div></div><div class="px-3 pb-3 d-flex align-items-center gap-2 flex-wrap"><span class="bdg pend me-1" id="pcnt"></span><span class="lab mb-0 me-2" id="psc">0 selected</span>'
    +'<button class="btn btn-primary btn-sm" id="pdup" disabled><i class="bi bi-files me-1"></i>Duplicate to other sections</button>'
+   +'<button class="btn btn-ok btn-sm" id="pdsel" disabled><i class="bi bi-check2 me-1"></i>Mark selected as Done</button>'
+   +'<button class="btn btn-ok btn-sm" id="pdall" disabled><i class="bi bi-check2-all me-1"></i>Mark all as Done</button>'
    +'<button class="btn btn-dark2 btn-sm" id="pclr">Clear selection</button></div>'
    +'<div class="tbl-wrap" id="pt"><div class="foot">Loading…</div></div></div><div id="pm" class="mt-3"></div>';
   try{await loadAll()}catch(err){$('pt').innerHTML='<div class="foot" style="color:var(--red)">'+esc(err.message)+'</div>';return}
   pfill();
   $('pq').oninput=pshow;PF.forEach(f=>$('pf_'+f[0]).onchange=pshow);
-  $('pdup').onclick=openDup;$('pclr').onclick=()=>{SEL.clear();pshow()};
+  $('pdup').onclick=openDup;$('pdsel').onclick=()=>bulkDone(DUP.filter(r=>SEL.has(r.row)&&nz(r.status)==='pending'));$('pdall').onclick=()=>bulkDone(PROWS);$('pclr').onclick=()=>{SEL.clear();pshow()};
   pshow();
 }
+let PROWS=[];
 function usel(rows){
-  $('psc').textContent=SEL.size+' selected';$('pdup').disabled=!SEL.size;
+  PROWS=rows;const tot=DUP.filter(r=>nz(r.status)==='pending').length,w=canWrite();
+  $('pcnt').textContent=tot+' pending'+(rows.length!==tot?' · '+rows.length+' shown':'');
+  $('psc').textContent=SEL.size+' selected';$('pdup').disabled=!SEL.size;$('pdsel').disabled=!SEL.size||!w;
+  $('pdall').disabled=!rows.length||!w;
+  $('pdall').innerHTML='<i class="bi bi-check2-all me-1"></i>Mark '+(rows.length!==tot?'all shown':'all')+' as Done ('+rows.length+')';
   const a=$('pall');if(a){a.checked=rows.length>0&&rows.every(r=>SEL.has(r.row));}
+  pbadge();
+}
+async function bulkDone(list){
+  if(!list.length)return;
+  if(!confirm('Mark '+list.length+' pending row(s) as Done in '+sheet+'?\n\nThis changes the Status in your Google Sheet.'))return;
+  $('pdsel').disabled=$('pdall').disabled=true;
+  $('pm').innerHTML='<div class="alert alert-info py-2">Marking '+list.length+' row(s) as Done…</div>';
+  try{
+    const d=await api('statusMany',{rows:list.map(r=>r.row),value:'Done'}),done=new Set(d.updated||[]);
+    DUP.forEach(r=>{if(done.has(r.row)){r.status='Done';r.c[stCol()]='Done'}});
+    done.forEach(k=>SEL.delete(k));pfill();pshow();
+    $('pm').innerHTML='<div class="alert alert-success py-2">✓ '+done.size+' row(s) marked Done.'+(d.skipped?' '+d.skipped+' skipped because they were no longer Pending in the sheet (press the reload button to refresh).':'')+'</div>';
+  }catch(err){
+    $('pm').innerHTML='<div class="alert alert-danger py-2">Not saved: '+esc(/Unknown action/.test(err.message)?'update Code.gs in Apps Script and deploy a New version first.':err.message)+'</div>';pshow();
+  }
 }
 function pshow(){
   const kw=nz($('pq').value),uc=UC[sheet];
@@ -784,7 +808,7 @@ function edit(r){
       await post({action:'update',row:r.row,values:vals});
       Object.assign(r.c,vals);
       r.date=r.c.C;r.teacher=r.c.F;r.subject=r.c.G;r.grade=r.c.H;r.section=r.c.I;r.title=r.c[tc]||'';r.status=r.c[sc]||'';
-      M.hide();rshow();
+      M.hide();rshow();pbadge();
     }catch(err){$('em').innerHTML='<div class="alert alert-danger py-2">Not saved: '+esc(err.message)+'</div>';$('es').disabled=false}
   };
 }
