@@ -14,7 +14,7 @@
 /* ===== DESIGN TOKENS (edit these to restyle) ===== */
 :root{
   --bg:#171717;          /* page background (reference image 1) */
-  --dot:#2c2c2c;         /* background dots */
+  --dot:#3a3a3a;         /* background dots */
   --panel:#0f1010;       /* cards / tables */
   --ink:#050606;         /* navbar, inputs */
   --line:#262a28;        /* borders */
@@ -159,6 +159,10 @@ tr.sel>*{--bs-table-bg-type:rgba(0,183,205,.09)}
 .dash{max-width:min(1450px,96vw)}
 .wchip{display:inline-block;padding:.1rem .6rem;border-radius:6px;font:500 .72rem var(--f-mono);color:#0b0c0c;margin-right:.4rem}
 #bgc{position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
+.heat.rk th:first-child,.heat.rk td:first-child{min-width:68px;width:68px;text-align:center}
+.heat.rk th:nth-child(2),.heat.rk td:nth-child(2){position:sticky;left:68px;background:#0b0c0c;z-index:2}
+.rk{display:inline-block;min-width:3em;padding:.05rem .55rem;border-radius:999px;font:600 .72rem var(--f-mono);border:1px solid var(--line);color:var(--tx)}
+.rk.r1{background:#ffbd2e;border-color:#ffbd2e;color:#1a1300}.rk.r2{background:#c9ced4;border-color:#c9ced4;color:#14171a}.rk.r3{background:#cd7f32;border-color:#cd7f32;color:#1a0d00}
 </style>
 </head>
 <body>
@@ -213,7 +217,8 @@ tr.sel>*{--bs-table-bg-type:rgba(0,183,205,.09)}
 </div>
 
 <div class="modal fade" id="dmd" tabindex="-1"><div class="modal-dialog dash modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="dtt"></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="db"></div></div></div></div>
-<div class="modal fade" id="mdl" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content" id="mc"></div></div></div>
+<div class="modal fade" id="cmd" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="cmt"></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="cmb"></div><div class="modal-footer"><button type="button" class="btn btn-dark2" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="cmy"></button></div></div></div></div>
+<div class="modal fade" id="mdl" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered"><div class="modal-content" id="mc"></div></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
@@ -319,9 +324,9 @@ $('csv').onclick=async()=>{
   const b=$('csv');b.disabled=true;
   try{
     const d=await api('csv');
-    if(!d.count){alert('No Pending rows in '+sheet+'.')}
+    if(!d.count){toast('No Pending rows in '+sheet+'.')}
     else{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([d.csv],{type:'text/csv;charset=utf-8'}));a.download=d.filename;document.body.appendChild(a);a.click();a.remove()}
-  }catch(err){alert(err.message)}
+  }catch(err){toast(err.message,'danger')}
   b.disabled=false;
 };
 function pwModal(un,self){
@@ -333,7 +338,7 @@ function pwModal(un,self){
   const M=bootstrap.Modal.getOrCreateInstance($('mdl'));M.show();
   $('ps').onclick=async()=>{
     const n=$('p_new').value;if(self&&n!==$('p_new2').value){$('em').innerHTML='<div class="alert alert-danger py-2">The new passwords do not match.</div>';return}
-    try{await (self?api('changePassword',{oldPassword:$('p_old').value,newPassword:n}):api('updateUser',{username:un,password:n}));M.hide();alert('Password saved.')}
+    try{await (self?api('changePassword',{oldPassword:$('p_old').value,newPassword:n}):api('updateUser',{username:un,password:n}));M.hide();toast('Password saved.','success')}
     catch(e){$('em').innerHTML='<div class="alert alert-danger py-2">'+esc(e.message)+'</div>'}
   };
 }
@@ -353,6 +358,22 @@ function draw(){
   $('tb').querySelectorAll('button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;draw()});
   pbadge();
   tab==='form'?form():tab==='Pending'?pendingTab():tab==='stats'?statsTab():listTab();
+}
+
+/* ---------- themed pop-ups (centered): confirm + small notices ---------- */
+function askConfirm(o){
+  return new Promise(res=>{
+    $('cmt').textContent=o.title;$('cmb').innerHTML=o.html;$('cmy').innerHTML=o.ok;$('cmy').className='btn '+(o.cls||'btn-primary');
+    const M=bootstrap.Modal.getOrCreateInstance($('cmd'));let fin=false;const done=v=>{if(!fin){fin=true;res(v)}};
+    $('cmy').onclick=()=>{done(true);M.hide()};
+    $('cmd').addEventListener('hidden.bs.modal',()=>done(false),{once:true});
+    M.show();
+  });
+}
+function toast(msg,type){
+  const d=document.createElement('div');d.className='alert alert-'+(type||'info')+' py-2 shadow';
+  d.style.cssText='position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:2000;max-width:min(560px,92vw)';
+  d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.remove(),4500);
 }
 const tbar=t=>'<div class="tbar"><span class="dots"><b></b><b></b><b></b></span><span>'+t+'</span></div>';
 
@@ -435,7 +456,7 @@ async function listTab(){
     $('lt').querySelectorAll('button[data-r]').forEach(b=>b.onclick=async()=>{
       b.disabled=true;
       try{await post({action:'status',row:+b.dataset.r,value:'Done'});rows=rows.filter(r=>r.row!==+b.dataset.r);show()}
-      catch(err){b.disabled=false;alert(err.message)}
+      catch(err){b.disabled=false;toast(err.message,'danger')}
     });
   };
   $('sr').oninput=show;show();
@@ -499,7 +520,9 @@ function usel(rows){
 }
 async function bulkDone(list){
   if(!list.length)return;
-  if(!confirm('Mark '+list.length+' pending row(s) as Done in '+sheet+'?\n\nThis changes the Status in your Google Sheet.'))return;
+  const ok=await askConfirm({title:'Mark as Done',ok:'<i class="bi bi-check2-all me-1"></i>Yes, mark as Done',
+    html:'<p class="mb-2">Mark <b>'+list.length+'</b> pending row'+(list.length===1?'':'s')+' as <b>Done</b> in <b>'+esc(sheet)+'</b>?</p><p class="mb-0 text-body-secondary small">This changes the Status in your Google Sheet. Only rows that are still Pending are changed.</p>'});
+  if(!ok)return;
   $('pdsel').disabled=$('pdall').disabled=true;
   $('pm').innerHTML='<div class="alert alert-info py-2">Marking '+list.length+' row(s) as Done…</div>';
   try{
@@ -525,7 +548,7 @@ function pshow(){
   $('pt').querySelectorAll('[data-m]').forEach(b=>b.onclick=async()=>{
     b.disabled=true;const k=+b.dataset.m;
     try{await post({action:'status',row:k,value:'Done'});const r=DUP.find(x=>x.row===k);r.status='Done';r.c[stCol()]='Done';SEL.delete(k);pfill();pshow()}
-    catch(err){b.disabled=false;alert(err.message)}
+    catch(err){b.disabled=false;toast(err.message,'danger')}
   });
   usel(rows);
 }
@@ -697,21 +720,26 @@ async function weeklyDash(name){
   $('db').innerHTML='<div class="row g-3 mb-3">'+[[nm+'s listed',rows.length],['Total usage',num(tot[1])||rows.reduce((u,r)=>u+num(r[1]),0)],['Weeks shown',cols.length],['With no usage',rows.filter(r=>!num(r[1])).length]]
    .map(c=>'<div class="col-6 col-md-3"><div class="scard"><b>'+c[1]+'</b><span class="lab mb-0">'+c[0]+'</span></div></div>').join('')+'</div>'
    +'<div class="row g-2 mb-3 align-items-end"><div class="col-md-4"><input type="text" class="form-control form-control-sm" id="wq" placeholder="Search '+nm.toLowerCase()+'…"></div>'
-   +'<div class="col-md-3"><select class="form-select form-select-sm" id="ws"><option value="">Order of the sheet</option><option value="1">Total usage (high to low)</option><option value="2">Total weeks (high to low)</option></select></div>'
+   +'<div class="col-md-3"><select class="form-select form-select-sm" id="ws"><option value="r">Rank: highest to lowest usage</option><option value="">Order of the sheet</option><option value="2">Total weeks (high to low)</option></select></div>'
    +'<div class="col-md-3"><div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" role="switch" id="wo"><label class="form-check-label small" for="wo">Only with usage</label></div></div>'
    +'<div class="col-md-2 text-md-end"><span class="wchip" style="background:#9FC5E8">TC</span><span class="wchip" style="background:#F9CB9C">OER</span><span class="wchip" style="background:#93C47D">TC+OER</span></div></div>'
    +'<div class="cardx"><div class="tbl-wrap" style="max-height:58vh" id="wt"></div></div><div id="wc" class="mt-3 d-flex flex-wrap gap-2"></div>'
-   +'<div class="foot">Mirrors the "'+esc(name==='Weekly Usage'?'Weekly Usage':'Weekly Usage (Sections)')+'" sheet (Teacher Created + OER). A week runs Monday to Sunday and counts once if there is at least one usage that week.</div>';
+   +'<div class="foot">Mirrors the "'+esc(name==='Weekly Usage'?'Weekly Usage':'Weekly Usage (Sections)')+'" sheet (Teacher Created + OER). A week runs Monday to Sunday and counts once if there is at least one usage that week. Rank = Total Usage from highest to lowest; equal usage shares the same rank.</div>';
   $('wc').innerHTML=checks.map(c=>'<span class="bdg '+(c.n?'':'done')+'" style="'+(c.n?'color:var(--red);border-color:#4a1d1a':'')+'">'+esc(c.t)+': '+c.n+'</span>').join('');
+  const RK=new Map();let lastU=null,rk=0;   // rank by Total Usage; equal usage shares the same rank
+  rows.slice().sort((a,b)=>num(b[1])-num(a[1])).forEach((x,i)=>{const u=num(x[1]);if(u!==lastU){rk=i+1;lastU=u}RK.set(x,rk)});
+  const ord=n=>{const s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0])};
+  const rkCell=x=>num(x[1])?'<span class="rk'+(RK.get(x)<=3?' r'+RK.get(x):'')+'">'+ord(RK.get(x))+'</span>':'<span style="color:#3a3f3d">—</span>';
   const show=()=>{
     const k=nz($('wq').value),so=$('ws').value;
     let r=rows.filter(x=>(!k||nz(x[0]).includes(k))&&(!$('wo').checked||num(x[1])>0));
-    if(so)r=r.slice().sort((a,b)=>num(b[+so])-num(a[+so]));
-    $('wt').innerHTML='<table class="table table-sm align-middle mb-0 heat text-nowrap"><thead><tr><th>'+nm+'</th><th class="text-center">Total Usage</th><th class="text-center">Total Weeks</th><th class="text-center">TC Weeks</th><th class="text-center">OER Weeks</th>'
+    if(so==='r')r=r.slice().sort((a,b)=>num(b[1])-num(a[1])||num(b[2])-num(a[2])||S(a[0]).localeCompare(S(b[0])));
+    else if(so)r=r.slice().sort((a,b)=>num(b[+so])-num(a[+so]));
+    $('wt').innerHTML='<table class="table table-sm align-middle mb-0 heat rk text-nowrap"><thead><tr><th class="text-center">Rank</th><th>'+nm+'</th><th class="text-center">Total Usage</th><th class="text-center">Total Weeks</th><th class="text-center">TC Weeks</th><th class="text-center">OER Weeks</th>'
      +cols.map(j=>'<th class="text-center">W'+esc(S(wk[j]))+'<br><span style="font-weight:400;text-transform:none;letter-spacing:0">'+esc(S(hd[j]))+'</span></th>').join('')+'</tr></thead><tbody>'
-     +r.map(x=>'<tr><td style="text-align:left">'+esc(x[0])+'</td>'+[1,2,3,4].map(j=>'<td><b>'+esc(S(x[j]))+'</b></td>').join('')
+     +r.map(x=>'<tr><td>'+rkCell(x)+'</td><td style="text-align:left">'+esc(x[0])+'</td>'+[1,2,3,4].map(j=>'<td><b>'+esc(S(x[j]))+'</b></td>').join('')
        +cols.map(j=>{const c=S(x[j]);return '<td style="'+(CL[c]?'background:'+CL[c]+';color:#0b0c0c;font-weight:600':'color:#3a3f3d')+'">'+(c||'·')+'</td>'}).join('')+'</tr>').join('')
-     +'<tr style="border-top:2px solid var(--line)"><td style="text-align:left"><b>TOTAL USAGE</b></td><td><b>'+esc(S(tot[1]))+'</b></td><td></td><td></td><td></td>'+cols.map(()=>'<td></td>').join('')+'</tr></tbody></table>';
+     +'<tr style="border-top:2px solid var(--line)"><td></td><td style="text-align:left"><b>TOTAL USAGE</b></td><td><b>'+esc(S(tot[1]))+'</b></td><td></td><td></td><td></td>'+cols.map(()=>'<td></td>').join('')+'</tr></tbody></table>';
   };
   ['wq','ws','wo'].forEach(i=>$(i).oninput=$(i).onchange=show);show();
 }
@@ -732,18 +760,18 @@ async function accountsTab(){
    +'<td><span class="bdg '+(u.active?'done':'')+'">'+(u.active?'active':'disabled')+'</span></td><td>'+esc(u.lastLogin||'—')+'</td>'
    +'<td class="text-end"><button class="btn btn-sm btn-dark2" data-p="'+esc(u.username)+'">Reset password</button> <button class="btn btn-sm btn-dark2" data-a="'+esc(u.username)+'" data-v="'+(u.active?0:1)+'">'+(u.active?'Disable':'Enable')+'</button> <button class="btn btn-sm btn-dark2" data-x="'+esc(u.username)+'"><i class="bi bi-trash"></i></button></td></tr>').join('')
    +'</tbody></table></div></div></div></div>';
-  const fail=e=>{alert(e.message);accountsTab()};
+  const fail=e=>{toast(e.message,'danger');accountsTab()};
   $('pane').querySelectorAll('[data-ok]').forEach(b=>b.onclick=()=>{const un=b.dataset.ok;api('approveRequest',{username:un,role:$('pane').querySelector('[data-rr="'+un+'"]').value}).then(accountsTab,fail)});
-  $('pane').querySelectorAll('[data-no]').forEach(b=>b.onclick=()=>{if(confirm('Reject the request from '+b.dataset.no+'?'))api('rejectRequest',{username:b.dataset.no}).then(accountsTab,fail)});
+  $('pane').querySelectorAll('[data-no]').forEach(b=>b.onclick=async()=>{if(await askConfirm({title:'Reject request',ok:'Reject',cls:'btn-danger',html:'Reject the account request from <b>'+esc(b.dataset.no)+'</b>?'}))api('rejectRequest',{username:b.dataset.no}).then(accountsTab,fail)});
   $('n_gen').onclick=()=>{const c='abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';let p='';const a=new Uint32Array(10);crypto.getRandomValues(a);a.forEach(v=>p+=c[v%c.length]);$('n_pw').value=p};
   $('n_go').onclick=async()=>{
-    try{await api('createUser',{username:$('n_un').value,name:$('n_nm').value,role:$('n_rl').value,password:$('n_pw').value});alert('Account created. Give the username and temporary password to the user.');accountsTab()}
+    try{await api('createUser',{username:$('n_un').value,name:$('n_nm').value,role:$('n_rl').value,password:$('n_pw').value});toast('Account created. Give the username and temporary password to the user.','success');accountsTab()}
     catch(e){$('n_m').innerHTML='<div class="alert alert-danger py-2">'+esc(e.message)+'</div>'}
   };
   $('pane').querySelectorAll('[data-r]').forEach(s=>s.onchange=()=>api('updateUser',{username:s.dataset.r,role:s.value}).then(accountsTab,fail));
   $('pane').querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>pwModal(b.dataset.p,false));
   $('pane').querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>api('updateUser',{username:b.dataset.a,active:b.dataset.v==='1'}).then(accountsTab,fail));
-  $('pane').querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{if(confirm('Delete account '+b.dataset.x+'?'))api('deleteUser',{username:b.dataset.x}).then(accountsTab,fail)});
+  $('pane').querySelectorAll('[data-x]').forEach(b=>b.onclick=async()=>{if(await askConfirm({title:'Delete account',ok:'Delete',cls:'btn-danger',html:'Delete the account <b>'+esc(b.dataset.x)+'</b>? This cannot be undone.'}))api('deleteUser',{username:b.dataset.x}).then(accountsTab,fail)});
 }
 
 /* ---------- title check panel (below the form) ---------- */
