@@ -14,7 +14,7 @@
 /* ===== DESIGN TOKENS (edit these to restyle) ===== */
 :root{
   --bg:#171717;          /* page background (reference image 1) */
-  --dot:#3a3a3a;         /* background dots */
+  --dot:#2c2c2c;         /* background dots */
   --panel:#0f1010;       /* cards / tables */
   --ink:#050606;         /* navbar, inputs */
   --line:#262a28;        /* borders */
@@ -159,8 +159,8 @@ tr.sel>*{--bs-table-bg-type:rgba(0,183,205,.09)}
 .dash{max-width:min(1450px,96vw)}
 .wchip{display:inline-block;padding:.1rem .6rem;border-radius:6px;font:500 .72rem var(--f-mono);color:#0b0c0c;margin-right:.4rem}
 #bgc{position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
-.heat.rk th:first-child,.heat.rk td:first-child{min-width:68px;width:68px;text-align:center}
-.heat.rk th:nth-child(2),.heat.rk td:nth-child(2){position:sticky;left:68px;background:#0b0c0c;z-index:2}
+.heat.rkt th:first-child,.heat.rkt td:first-child{min-width:68px;width:68px;text-align:center}
+.heat.rkt th:nth-child(2),.heat.rkt td:nth-child(2){position:sticky;left:68px;background:#0b0c0c;z-index:2}
 .rk{display:inline-block;min-width:3em;padding:.05rem .55rem;border-radius:999px;font:600 .72rem var(--f-mono);border:1px solid var(--line);color:var(--tx)}
 .rk.r1{background:#ffbd2e;border-color:#ffbd2e;color:#1a1300}.rk.r2{background:#c9ced4;border-color:#c9ced4;color:#14171a}.rk.r3{background:#cd7f32;border-color:#cd7f32;color:#1a0d00}
 </style>
@@ -480,7 +480,8 @@ async function getRows(s,force){
 function addToCache(s,list,from){   // show new rows at once instead of reloading the whole sheet
   const c=CACHE[s];if(!c)return;
   const tc=SHEETS[s].right[0][0],sc=SHEETS[s].right.find(x=>x[2]==='st')[0];
-  pbadge();list.forEach((p,i)=>c.rows.unshift({row:from+i,c:Object.assign({},p),date:p.C||'',teacher:p.F||'',subject:p.G||'',grade:p.H||'',section:p.I||'',title:p[tc]||'',status:p[sc]||''}));
+  list.forEach((p,i)=>c.rows.unshift({row:from+i,c:Object.assign({},p),date:p.C||'',teacher:p.F||'',subject:p.G||'',grade:p.H||'',section:p.I||'',title:p[tc]||'',status:p[sc]||''}));
+  pbadge();
 }
 function pbadge(){const b=$('pbadge'),c=CACHE[sheet];if(!b)return;if(!c){b.hidden=true;return}b.textContent=c.rows.filter(r=>nz(r.status)==='pending').length;b.hidden=false}
 async function loadAll(force){DUP=await getRows(sheet,force)}
@@ -735,7 +736,7 @@ async function weeklyDash(name){
     let r=rows.filter(x=>(!k||nz(x[0]).includes(k))&&(!$('wo').checked||num(x[1])>0));
     if(so==='r')r=r.slice().sort((a,b)=>num(b[1])-num(a[1])||num(b[2])-num(a[2])||S(a[0]).localeCompare(S(b[0])));
     else if(so)r=r.slice().sort((a,b)=>num(b[+so])-num(a[+so]));
-    $('wt').innerHTML='<table class="table table-sm align-middle mb-0 heat rk text-nowrap"><thead><tr><th class="text-center">Rank</th><th>'+nm+'</th><th class="text-center">Total Usage</th><th class="text-center">Total Weeks</th><th class="text-center">TC Weeks</th><th class="text-center">OER Weeks</th>'
+    $('wt').innerHTML='<table class="table table-sm align-middle mb-0 heat rkt text-nowrap"><thead><tr><th class="text-center">Rank</th><th>'+nm+'</th><th class="text-center">Total Usage</th><th class="text-center">Total Weeks</th><th class="text-center">TC Weeks</th><th class="text-center">OER Weeks</th>'
      +cols.map(j=>'<th class="text-center">W'+esc(S(wk[j]))+'<br><span style="font-weight:400;text-transform:none;letter-spacing:0">'+esc(S(hd[j]))+'</span></th>').join('')+'</tr></thead><tbody>'
      +r.map(x=>'<tr><td>'+rkCell(x)+'</td><td style="text-align:left">'+esc(x[0])+'</td>'+[1,2,3,4].map(j=>'<td><b>'+esc(S(x[j]))+'</b></td>').join('')
        +cols.map(j=>{const c=S(x[j]);return '<td style="'+(CL[c]?'background:'+CL[c]+';color:#0b0c0c;font-weight:600':'color:#3a3f3d')+'">'+(c||'·')+'</td>'}).join('')+'</tr>').join('')
