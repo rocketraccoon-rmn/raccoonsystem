@@ -59,7 +59,7 @@ function request_(d) {   // public: someone asks for an account; an admin approv
   cache.put('reqn', String(n + 1), 3600);
   return { ok: true };
 }
-const WRITE = { add: 1, status: 1, update: 1, setup: 1, createUser: 1, updateUser: 1, deleteUser: 1, changePassword: 1, request: 1, approveRequest: 1, rejectRequest: 1 };
+const WRITE = { add: 1, status: 1, update: 1, setup: 1, createUser: 1, updateUser: 1, deleteUser: 1, changePassword: 1, request: 1, approveRequest: 1, rejectRequest: 1, statusMany: 1 };
 const BUST = { changePassword: 1, createUser: 1, updateUser: 1, deleteUser: 1, approveRequest: 1, setup: 1 };
 function now_() { return Utilities.formatDate(new Date(), SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(), 'yyyy-MM-dd HH:mm'); }
 
@@ -319,6 +319,23 @@ function route_(d) {
       else cell.setValue(v);
     });
     return { ok: true };
+  }
+  if (a === 'statusMany') {   // mark many rows Done at once; only rows that are still Pending are changed
+    if (d.value !== 'Done') return { ok: false, error: 'Only the value Done is allowed here.' };
+    const want = (d.rows || []).map(Number).filter(function (n) { return n >= 3 && n === Math.floor(n); });
+    if (!want.length) return { ok: false, error: 'No rows received.' };
+    if (want.length > 1000) return { ok: false, error: 'Too many rows at once (max 1000).' };
+    const col = colNum_(cfg.status), lo = Math.min.apply(null, want), hi = Math.max.apply(null, want);
+    if (hi > sh.getMaxRows()) return { ok: false, error: 'Row out of range.' };
+    const cur = sh.getRange(lo, col, hi - lo + 1, 1).getValues();
+    const rows = want.filter(function (n, i) { return want.indexOf(n) === i && String(cur[n - lo][0]).trim().toLowerCase() === 'pending'; })
+      .sort(function (x, y) { return x - y; });
+    for (let i = 0; i < rows.length;) {   // one write per run of neighbouring rows
+      let j = i; while (j + 1 < rows.length && rows[j + 1] === rows[j] + 1) j++;
+      sh.getRange(rows[i], col, j - i + 1, 1).setValues(rows.slice(i, j + 1).map(function () { return ['Done']; }));
+      i = j + 1;
+    }
+    return { ok: true, updated: rows, skipped: want.length - rows.length };
   }
   if (a === 'add') {
     const rows = d.rows || []; if (!rows.length) return { ok: false, error: 'No entries received' };
