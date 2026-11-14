@@ -59,7 +59,7 @@ function request_(d) {   // public: someone asks for an account; an admin approv
   cache.put('reqn', String(n + 1), 3600);
   return { ok: true };
 }
-const WRITE = { add: 1, status: 1, update: 1, setup: 1, createUser: 1, updateUser: 1, deleteUser: 1, changePassword: 1, request: 1, approveRequest: 1, rejectRequest: 1, statusMany: 1 };
+const WRITE = { add: 1, status: 1, update: 1, setup: 1, createUser: 1, updateUser: 1, deleteUser: 1, changePassword: 1, request: 1, approveRequest: 1, rejectRequest: 1, statusMany: 1, deleteRow: 1 };
 const BUST = { changePassword: 1, createUser: 1, updateUser: 1, deleteUser: 1, approveRequest: 1, setup: 1 };
 function now_() { return Utilities.formatDate(new Date(), SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(), 'yyyy-MM-dd HH:mm'); }
 

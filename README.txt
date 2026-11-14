@@ -1,377 +1,266 @@
 =====================================================================
- USAGE FORM TOOLKIT  -  Teacher Created / OER / AR data entry
+ ROCKET RACCOON SYSTEM  -  Teacher Created / OER / AR data entry
  For the school weekly-usage Google Sheet (SY 2026-2027 workbook)
 =====================================================================
 
 WHAT IS IN THIS FOLDER
-  1. usage-website-bootstrap.html - the data-entry website (dark design
-                           built with Bootstrap). Double-click to open in
-                           Chrome or Edge. Needs internet (it loads
-                           Bootstrap and the fonts from the internet).
+  1. usage-website-bootstrap.html - the website (rename it index.html if you
+                           host it online). Double-click to open in Chrome
+                           or Edge. Needs internet (Bootstrap, icons, fonts).
   2. Code.gs             - the Google Apps Script. It lives inside your
-                           Google Sheet and receives what the website sends.
+                           Google Sheet and does the reading/writing.
   3. logo.png            - the logo (already built into the website).
   4. README.txt          - this guide.
 
-HOW IT WORKS (in one picture)
-  Website (usage-website-bootstrap.html)  --->  Apps Script (Code.gs)  --->  Google Sheet
-  A website cannot write into a Google Sheet by itself. The script inside
-  the sheet does the writing. The website only needs the script's URL
-  (the "Web App URL" that ends in /exec).
+HOW IT WORKS
+  Website  --->  Apps Script (Code.gs)  --->  Google Sheet
+  A website cannot write into a Google Sheet by itself, so the script inside
+  the sheet does it. The website only needs the script's "Web App URL"
+  (ends in /exec). Everything except the connection test needs a login.
 
 
 ---------------------------------------------------------------------
  A. REQUIREMENTS
 ---------------------------------------------------------------------
-  - A Google account that OWNS (or can edit) the Google Sheet.
-  - Google Chrome or Microsoft Edge, with internet (Bootstrap, its icons
-    and the fonts load from the internet).
-  - The Google Sheet must have these tabs, named exactly:
-        Teacher Created     OER     AR     INDEX
-  - Data starts on row 3 (rows 1-2 are headings).
-  - The input columns below must stay in the same positions. If you add or
-    move columns, see section H.
-
-  INPUT COLUMNS THE FORM WRITES TO (everything else is left alone):
-
-  Teacher Created
-     C Date | F Teacher | G Subject | H Grade Level | I Section
-     J CLE Digital Authoring Tool | K Title | L Resource (New/Old)
-     M Resource Creation | N Resource Usage | O Session Duration
-     Q Learning Activity/Strategy | R Status
-
-  OER
-     C Date | F Teacher | G Subject | H Grade | I Section | J Title
-     K OER Type | L OER Usage | N Session Duration
-     O Learning Activity/Strategy | P Status
-
-  AR
-     C Date | F Teacher | G Subject | H Grade | I Section | J Title
-     K Resource Type | L AR Usage | M Session Duration
-     O Learning Activity/Strategy | P Status
-
-  Formula columns (Month, Grading Period, Mode of Delivery, Duplicate?,
-  etc.) are NEVER written by the form. Keep their formulas in the sheet.
-  Month and Grading Period fill in by themselves from the Date.
-
-  DROPDOWN CHOICES
-  The form copies the dropdown lists (data validation) already set up in
-  your sheet. If a column has no dropdown, it falls back to the INDEX tab
-  (A Teacher, D Subject, M Section, V Grade, P Activity Type,
-  S Learning Activity, Y OER Type), or a plain text box.
+  - A Google account that owns (or can edit) the Google Sheet.
+  - Chrome or Edge with internet.
+  - Tabs named exactly: Teacher Created, OER, AR, INDEX, TCUPLOAD,
+    OERUPLOAD, ARUPLOAD, Weekly Usage, Weekly Usage (Sections).
+    Data starts on row 3. (Weekly Usage D2 = start of school-year week 1.)
+  - The form writes ONLY these input columns, never the formula columns:
+      Teacher Created: C Date, F Teacher, G Subject, H Grade, I Section,
+        J CLE Digital Authoring Tool, K Title, L Resource (New/Old),
+        M Resource Creation, N Resource Usage, O Session Duration,
+        Q Learning Activity/Strategy, R Status
+      OER: C Date, F Teacher, G Subject, H Grade, I Section, J Title,
+        K OER Type, L OER Usage, N Session Duration,
+        O Learning Activity/Strategy, P Status
+      AR:  C Date, F Teacher, G Subject, H Grade, I Section, J Title,
+        K Resource Type, L AR Usage, M Session Duration,
+        O Learning Activity/Strategy, P Status
+  - Dropdown choices are copied from the dropdown rules in your sheet
+    (row 3); if a column has none, from the INDEX tab, else a text box.
 
 
 ---------------------------------------------------------------------
- B. FIRST-TIME SETUP  (about 3 minutes)
+ B. FIRST-TIME SETUP  (about 5 minutes)
 ---------------------------------------------------------------------
-  1. Open your Google Sheet.
-  2. Click  Extensions > Apps Script.
-  3. Delete the sample code. Open Code.gs from this folder in Notepad,
-     copy everything, and paste it into the Apps Script editor.
-     Click the Save icon.
-  3b. Near the top of the code, change
-         const SETUP_CODE = 'change-me';
-      to your own secret word (for example 'blue-raccoon-2026'). You need it
-      once, to create the first admin account. Save again.
-  4. Click  Deploy > New deployment.
-     Click the gear icon, choose  Web app, then set:
-         Execute as:        Me
-         Who has access:    Anyone
-     Click Deploy.
-  5. Click Authorize access, choose your Google account.
-     If Google shows "Google hasn't verified this app", click
-     Advanced > Go to (project name) (unsafe) > Allow.
-     This is normal for your own script.
-  6. Copy the Web app URL (it ends in /exec).
-  7. Double-click usage-website-bootstrap.html (opens in Chrome/Edge).
-     Paste the Web app URL on the sign-in page. The first time, the page
-     asks you to create the ADMIN account: type the SETUP_CODE from step
-     3b, your name, a username and a password (min. 8 characters).
-     You are then signed in. The page remembers the URL.
+  1. Open your Google Sheet > Extensions > Apps Script.
+  2. Delete the sample code, paste ALL of Code.gs, click Save.
+  3. Near the top change  const SETUP_CODE = 'change-me';  to your own
+     secret word. It is needed once, to create the first admin. Save.
+  4. Deploy > New deployment > gear icon > Web app:
+        Execute as: Me        Who has access: Anyone
+     Deploy, then Authorize access (Advanced > Go to ... > Allow).
+     Do NOT choose "Only myself": the website could not reach the script.
+  5. Copy the Web app URL (ends in /exec).
+  6. Open usage-website-bootstrap.html, paste the URL, and create the ADMIN
+     account (setup code, name, username, password min. 8 characters).
 
 
 ---------------------------------------------------------------------
  C. DAILY USE
 ---------------------------------------------------------------------
-  1. Open usage-website-bootstrap.html and sign in with your account.
-  2. Click the sheet at the top: Teacher Created, OER or AR.
-  3. Form tab:
-       - Fill in the fields. Required fields are marked with a red *.
-       - Session Duration is optional. Mode of Delivery fills in by
-         itself, the same way as in the sheet: Synchronous when a Session
-         Duration is chosen, Asynchronous when only the Date is filled.
-       - Status defaults to Pending. Change it if needed.
-  4. BEFORE submitting, check the title in the panel below the form
-     ("Check existing titles"). It fills in as you type the Title.
-         Green  = no entry with this title yet. You can proceed.
-         Orange = the title exists in other sections (listed with row
-                  numbers). This is fine; a new section may proceed.
-         Red    = already entered for the section you selected.
-     You can also use the search box and the Teacher / Subject / Grade /
-     Section / Status filters to look at older data. It searches ALL rows,
-     Done and Pending.
-  5. Click Submit -> the entry is added to the next empty row of the
-     sheet. After a successful submit the Title is cleared and the other
-     fields stay, so you can enter the next resource for the same class.
-  6. Pending tab (each of Teacher Created, OER and AR):
-       - Shows only the rows with Status Pending. Use the search box and
-         the Teacher / Subject / Grade / Section filters, like in the
-         "Check existing titles" panel of the form.
-       - Tick the rows you want (or use the top checkbox for all rows
-         shown), then click "Duplicate to other sections". The small
-         copy button at the end of a row does the same for that one row.
-       - In the pop-up: tick the sections to copy to and choose the grade
-         of each section. The preview shows what will be saved.
-       - Each copy is saved with Usage = Non-unique. The original rows
-         are not changed. The status of the copies (default Pending) and
-         their date (default: same date as the original) can be changed
-         in the pop-up.
-       - A copy is skipped if the same title is already entered for that
-         section, or if the section is the row's own section.
-       - "Done" button on a row: changes its Status in the Google Sheet
-         to Done.
-     Done tab: rows with Status Done.
-  7. Edit button (in the title-check table): change a title, section,
-     status, etc. for an existing row. Only the fields you change are
-     written.
+  Top bar: /TEACHER CREATED  /OER  /AR  and DATA OVERVIEW (dropdown).
+  Each sheet has the tabs: Form | Pending | Done | Stats, and at the right:
+  Row (show/hide the row numbers), reload button, CSV.
 
+  FORM TAB
+   - Left: "Check existing titles". Right: the entry form.
+   - Type the Title: the banner on the left checks it against ALL rows (Done
+     and Pending) for the grade of the new entry (the form's Grade, or the
+     Grade filter if the form's Grade is still empty):
+        GREEN  = no entry with this exact title yet. You can proceed.
+        RED    = duplicate: the same title is already entered for the same
+                 grade. The banner lists the grade, section and row.
+        ORANGE = the same title exists only in other grades (listed). It is
+                 not entered for your grade, so you can proceed. Also orange
+                 when no Grade is chosen yet, as a reminder to pick one.
+     The table below highlights the matching rows in the same colours and has
+     a Grade column. Filters and search cover ALL rows, Done and Pending.
+   - Month and Grading Period come from the sheet. Session Duration is
+     optional; Mode of Delivery fills in by itself like the sheet formula:
+     Synchronous if a duration is chosen, else Asynchronous.
+   - Submit saves to the next empty row. After saving, only the Title is
+     cleared so you can enter the next resource for the same class.
+   - Pencil button (left of each row in the panel) edits a saved row.
 
-  8. LAYOUT of the Form tab: the "Check existing titles" filter is on the
-     LEFT, the data-entry form is on the RIGHT (on a small screen the form
-     comes first).
+  PENDING TAB
+   - Only rows with Status Pending. Search + Teacher/Subject/Grade/Section.
+   - The number of pending rows is a yellow badge on the Pending tab (visible
+     from every tab) and at the top of the list ("22 pending", or
+     "22 pending - 5 shown" when a filter is on).
+   - Tick rows, then "Duplicate to other sections": choose sections and the
+     grade of each; copies are saved with Usage = Non-unique (originals are
+     not changed). Copies are skipped if the same title is already entered
+     for that section.
+   - "Done" on a row, "Mark selected as Done", or "Mark all as Done (n)"
+     (all rows shown; with a filter on, only those). A pop-up in the middle
+     of the screen, in the system's theme, asks you to confirm. Only rows
+     still Pending in the sheet are changed. Delete-account and
+     reject-request also use this pop-up, and short notices appear at the
+     bottom of the screen instead of the browser's own boxes.
+   DONE TAB: rows with Status Done.
 
-  9. CSV button (at the right of the tabs, for the selected sheet)
-     Downloads a .csv with ONLY the rows whose Status is Pending, taken
-     from TCUPLOAD (Teacher Created), OERUPLOAD (OER) or ARUPLOAD (AR).
-     The header row is copied exactly from row 1 of that upload sheet
-     (nothing renamed, nothing reordered, extra columns such as Holder and
-     Checking included), and every value is exactly what the upload sheet
-     shows. Upload row n is matched to source row n+1, the way your upload
-     sheets are built. If the upload sheet has no new rows yet, check that
-     its formulas reach the last row.
+  CSV BUTTON: downloads only the PENDING rows of the selected form in the
+   exact format of TCUPLOAD / OERUPLOAD / ARUPLOAD: the header row is copied
+   as it is (nothing renamed or reordered) and the values are what the upload
+   sheet shows. Upload row n belongs to source row n+1. Check that the upload
+   sheets have formulas down to the last row.
 
- 10. STATS tab (Teacher Created, OER or AR)
-     Table of weeks x tools: every tool/resource type used (CLE Digital
-     Authoring Tool for Teacher Created, OER Type for OER, Resource Type
-     for AR) with the count in each week and totals. Filter by Status and
-     by week range. A week runs Monday to Sunday; Week 1 starts on the
-     date in cell D2 of the "Weekly Usage" sheet, the same numbering as
-     that sheet.
+  STATS TAB (per form): weeks x tools (CLE Digital Authoring Tool for Teacher
+   Created, OER Type for OER, Resource Type for AR), counts and totals,
+   filters by Status and week range. Week 1 starts at Weekly Usage D2.
 
- 11. DATA OVERVIEW (top bar, after /AR) is a dropdown with three pop-up
-     dashboards:
-       - Overall: combines the three forms. Summary cards, a PIE CHART of
-         the usage share of each form (red = Teacher Created, yellow = OER,
-         green = AR), a weeks x forms table, and a table of every
-         tool/resource used with the count per form. It has Status and
-         week-range filters.
-       - Weekly Usage: mirrors the "Weekly Usage" sheet: every teacher with
-         Total Usage, Total Weeks, TC Weeks, OER Weeks and one column per
-         week (TC = blue, OER = orange, TC+OER = green), the TOTAL USAGE row
-         and the two "Check" lines (both should be 0). Search, sort, and
-         "Only with usage" filter.
-       - Section Weekly Usage: the same, per section. It mirrors the
-         "Weekly Usage (Sections)" sheet; only the name in the website is
-         changed, the Google Sheet tab keeps its name.
-     The numbers come straight from those sheets, so they always match.
-     The Stats tab inside each form is still there and unchanged.
+  DATA OVERVIEW (dropdown, pop-ups)
+   - Overall: all three forms - cards, pie chart (red = Teacher Created,
+     yellow = OER, green = AR), weeks x forms, tools used.
+   - Weekly Usage: mirrors the "Weekly Usage" sheet (TC blue, OER orange,
+     TC+OER green, totals and the two Check lines, which should be 0). It
+     adds a RANK column: teachers ranked by Total Usage from highest to
+     lowest (1st, 2nd, 3rd ... with gold, silver and bronze for the top
+     three). Equal usage shares the same rank; no usage shows a dash. The
+     list is sorted by rank by default; "Order of the sheet" and "Total
+     weeks" are in the sort dropdown. Rank is always calculated over all
+     teachers, so searching or filtering does not change it.
+   - Section Weekly Usage: mirrors "Weekly Usage (Sections)".
 
- 12. ACCOUNTS (admins only): open the profile icon at the top right >
-     Accounts. Create accounts, choose the role, reset a password,
-     disable/enable or delete an account (see section F). It is no longer
-     a tab in the forms. A red number next to your name means there are
-     account requests waiting (see below).
+  PROFILE ICON (top right): Change password, Sign out, and for admins
+   Accounts.
 
- 12b. REQUEST AN ACCOUNT: the sign-in page has a "Request an account" link.
-     The person enters a name, a username, the password they want and an
-     optional note. Nothing is created yet: the request is saved (with the
-     password only as a hash) in a hidden "Requests" tab. An admin opens
-     Accounts, sees "Account requests", picks a role and clicks Approve
-     (the person can then sign in with the password they chose) or Reject.
-     At most 20 requests per hour are accepted, to stop spam.
-
- 13. SPEED: the page keeps each sheet's rows in memory for 3 minutes and
-     adds new or edited rows on screen at once, so switching tabs does not
-     reload everything. The round-arrow button next to CSV reloads the data
-     (and the dropdown lists) from the Google Sheet. The script also caches
-     the dropdown lists for 10 minutes and the login check for 5 minutes.
-     If someone else edits the sheet, press the reload button to see it.
-     Saving a row still takes a couple of seconds: that part is Google.
-
- 14. BACKGROUND: a still gradient dot field (violet to cyan). The hover
-     lens effect was removed on request. To change the dots, see the Dot
-     Field block near the end of the script in the HTML file (GAP = dot
-     spacing, FROM and TO = the two colors).
-
- 14b. RELOADING THE PAGE (browser reload icon): you stay signed in and on
-     the same sheet and tab, with the last data shown at once. The page
-     then refreshes the data from the Google Sheet in the background. This
-     works inside the same browser tab. If you close the tab, you must sign
-     in again (unless you ticked "Keep me signed in"). Signing out erases
-     the saved screen and data.
-
- 15. ROW NUMBERS: the "Row numbers" button (next to CSV) shows or hides the
-     row number column in the tables. They are hidden by default so the
-     edit (pencil) button stays visible.
----------------------------------------------------------------------
- D. MAKING A COPY OF THE GOOGLE SHEET (new quarter / new school year)
----------------------------------------------------------------------
-  A copy keeps the script code, but NOT the deployment. The old URL still
-  points to the ORIGINAL sheet. For each copy:
-  1. File > Make a copy.
-  2. Open the copy > Extensions > Apps Script (the code is already there).
-  3. Deploy > New deployment > Web app > Execute as: Me,
-     Who has access: Anyone > Deploy > Authorize.
-  4. Copy the NEW /exec URL, paste it in the website, click Connect.
-  Use the same usage-website-bootstrap.html file. Only the URL changes.
-
-  WARNING: if you paste the old URL by mistake, entries go into the old
-  sheet.
-
-  If you create a brand-new blank sheet instead of copying, you must also
-  paste Code.gs into it (step B3) and recreate the same tab names and
-  column layout (section A). Copying is much easier.
+  SPEED AND RELOAD: each sheet's rows are kept for 3 minutes and new/edited
+   rows appear at once. The reload button re-reads the Google Sheet. If you
+   reload the browser page you stay signed in on the same screen with the
+   last data, which is then refreshed quietly (same browser tab only; sign
+   out erases it).
 
 
 ---------------------------------------------------------------------
- E. UPDATING THE SCRIPT LATER
+ D. ACCOUNTS AND SECURITY
 ---------------------------------------------------------------------
-  If you receive a new Code.gs:
-  1. Extensions > Apps Script. Replace all the code. Save.
-  2. Deploy > Manage deployments > click the pencil icon >
-     Version: New version > Deploy.
-  The URL stays the same. (Saving the code alone is NOT enough; the web
-  app keeps running the old version until you deploy a new version.)
-  Each copy of the sheet has its own script, so update each one.
-
-
----------------------------------------------------------------------
- F. ACCOUNTS AND SECURITY (login)
----------------------------------------------------------------------
-  Everything except the connection test needs a signed-in account.
-  ROLES
-     admin    - everything, plus Accounts (profile icon menu)
-     encoder  - add, edit, duplicate, mark done, stats, CSV
-     viewer   - read only (view, filters, stats, CSV)
-  CREATE AN ACCOUNT (admin): profile icon > Accounts > fill in name, username, role and a
-  temporary password (the Generate button makes one) > Create account. Give
-  the username and password to the user; they can change it from the user
-  menu at the top right > Change password.
-  OTHER ACTIONS: change a role, Reset password, Disable/Enable, Delete.
-  The last active admin cannot be disabled, demoted or deleted.
-  SIGN-IN: stays for 12 hours, or 7 days with "Keep me signed in". After 5
-  wrong passwords an account is locked for 10 minutes. Forgot the admin
-  password? Another admin can reset it. If you are the only admin, open the
-  Google Sheet, unhide the "Users" sheet (View > Hidden sheets), delete its
-  rows below the header, then open the website: it asks for the first admin
-  again (needs your SETUP_CODE).
-  WHERE ACCOUNTS ARE KEPT: in a hidden sheet named "Users" inside your
-  Google Sheet. Only salted, hashed passwords are stored, never the real
-  password. Anyone who can EDIT your Google Sheet can still open that sheet,
-  so share the Google Sheet only with people you trust. The old PASSCODE
-  setting no longer exists.
+  Roles: admin (everything + Accounts), encoder (add/edit/duplicate/done,
+  stats, CSV), viewer (read only).
+  CREATE AN ACCOUNT: profile icon > Accounts > name, username, role,
+   temporary password (Generate button) > Create account.
+  REQUEST AN ACCOUNT: the sign-in page has a "Request an account" link. The
+   person chooses a username and password; it is saved (password hashed) in
+   a hidden "Requests" tab. A red number by the admin's name shows waiting
+   requests; in Accounts the admin picks a role and clicks Approve/Reject.
+   Max 20 requests per hour.
+  Other actions: change a role, reset a password, disable/enable, delete. The
+   last active admin cannot be disabled, demoted or deleted.
+  Sessions last 12 hours (7 days with "Keep me signed in"). After 5 wrong
+   passwords an account is locked for 10 minutes.
+  Accounts live in a hidden "Users" tab of the Google Sheet (salted hashed
+   passwords only). Anyone who can EDIT the sheet can open it, so share the
+   sheet only with people you trust. Forgot the only admin password? Unhide
+   "Users" (View > Hidden sheets), delete the rows under the header, reopen
+   the website: it asks for the first admin again (needs your SETUP_CODE).
+  After the first admin exists, change SETUP_CODE to a new secret word.
 
 
 ---------------------------------------------------------------------
- G. TROUBLESHOOTING
+ E. COPYING THE GOOGLE SHEET (new quarter / school year)
 ---------------------------------------------------------------------
-  "Enter the full URL ending in /exec"
-      Paste the Web app URL from Deploy, not the Apps Script editor URL.
-
-  Cannot connect / red message after Connect
-      - Check that "Who has access" is set to Anyone.
-      - Make sure you completed Authorize access.
-      - After editing the script, deploy a NEW VERSION (section E).
-
-  "Old script version: redeploy the new Code.gs"
-      The sheet still runs an old script. Do section E.
-
-  Dropdowns are empty or show a text box
-      The column has no dropdown rule on row 3 and no matching list in the
-      INDEX tab. Add a data-validation dropdown to that column in the
-      sheet (row 3 is the one the form reads).
-
-  Check-title panel shows fewer rows than the sheet
-      Compare with the line "Loaded N rows from the sheet (X Done,
-      Y Pending)". The page skips rows that have no Title and no Teacher.
-
-  Entry added but Grading Period / Month / Mode is blank
-      The formula columns do not extend to that row. Fill the formulas
-      down in the Google Sheet.
-
-  Date shows wrong or as a number
-      Format column C in the sheet as a date.
-
-  Something went to the wrong sheet
-      You used the URL of a different copy. Check the URL (section D).
-
-
-  "Cannot reach the script, or it is the old version"
-      The Web App URL is wrong, or you did not deploy the new Code.gs as a
-      New version (section E).
-
-  "Open Code.gs, change SETUP_CODE..."
-      Set your own SETUP_CODE (step 3b), save, deploy a new version.
-
-  "Wrong username or password" / "Too many wrong attempts"
-      Check the spelling; after 5 failures wait 10 minutes, or ask an admin
-      to reset your password.
-
-  "Your account is read-only"
-      The account role is viewer. An admin can change it to encoder.
-
-  Pending CSV says there are no Pending rows
-      No row in the selected sheet has Status Pending.
+  File > Make a copy. The copy has the script (and the Users tab, so the same
+  logins work), but NOT the deployment. In the copy: Extensions > Apps
+  Script > Deploy > New deployment (Web app, Me, Anyone) > Authorize, copy
+  the NEW /exec URL and use it in the website. The old URL still points to
+  the old sheet. If you delete the Users tab in a copy, the script creates a
+  new empty one and the website asks for a first admin again.
+  A brand-new blank sheet needs Code.gs pasted in and the same tab names and
+  columns.
 
 
 ---------------------------------------------------------------------
- H. IF YOU CHANGE THE SHEET'S COLUMNS
+ F. UPDATING THE SCRIPT LATER
 ---------------------------------------------------------------------
-  The column letters are set in two places:
-    - Code.gs         -> the CFG block at the top
-    - usage-website-bootstrap.html -> the SHEETS block inside the <script> section
-  Change the letters in both so they match the new layout, then follow
-  section E (new version) and refresh the website page.
+  Paste the new Code.gs, Save, then Deploy > Manage deployments > pencil >
+  Version: New version > Deploy. The URL stays the same. (Saving alone is not
+  enough.) Each copy of the sheet has its own script.
 
 
 ---------------------------------------------------------------------
- I. GOOD TO KNOW
+ G. HOSTING ON YOUR OWN DOMAIN (Hostinger)
 ---------------------------------------------------------------------
-  - The website is a local file. Your data goes only between your browser
-    and your own Google Sheet. Do not upload the website to a public place.
-  - It cannot pull data from Moodle by itself; you type the entries in the
-    form.
-  - It does not delete rows. If a row is a true duplicate, delete it in
-    the Google Sheet (deleting rows in the middle can affect formulas, so
-    check them afterwards) or fix it with the Edit button.
-  - The title match ignores capital letters, extra spaces and punctuation.
-  - New entries go to the first row after the last row that has data in the
-    key columns (Date, Teacher, Title).
+  Needs a Hostinger WEB HOSTING plan with File Manager (not Website Builder).
+  1. Rename usage-website-bootstrap.html to index.html.
+  2. hPanel > Websites > Dashboard > File Manager > public_html > Upload
+     index.html (remove any default placeholder page). For a subdomain
+     (usage.yourdomain.com) create it under Domains > Subdomains and upload
+     into its folder.
+  3. SSL page: enable SSL / Force HTTPS.
+  4. Open https://yourdomain.com, paste the Web App URL, sign in.
+  Do NOT upload Code.gs. Replace index.html for updates and press Ctrl+F5.
+
 
 ---------------------------------------------------------------------
- J. CHANGING THE LOOK OF THE WEBSITE
+ H. DATES SHOW ONE DAY OFF (time zones)
 ---------------------------------------------------------------------
-  usage-website-bootstrap.html uses Bootstrap 5.3 and Bootstrap Icons
-  (loaded from cdn.jsdelivr.net) plus Google Fonts.
+  Cause: the Apps Script project has its own time zone, which can differ
+  from the Google Sheet's. Old versions saved the typed date as midnight in
+  the SCRIPT time zone, so the sheet could show the day before.
+  Current Code.gs reads and writes dates in the Google Sheet's time zone.
+  To repair rows saved by old versions (once per sheet):
+    1. File > Make a copy (backup).
+    2. In Apps Script choose function  checkFormDates  > Run > open the
+       Execution log: it shows both time zones and what would change.
+    3. If the examples are right, run  fixFormDates.
+  It only changes dates that are exactly midnight in the script time zone but
+  not in the sheet's time zone. Dates typed by hand are not touched.
 
-  DESIGN
-  - Background: dark with a dot pattern.
-  - Colors: black panels with a green accent and a terminal-style look.
-  - Cards have a glowing border that follows the mouse near their edges.
-  - Fonts: Oswald (headings), Inter (body text), Poppins (buttons and
-    tabs), JetBrains Mono (labels, tables, badges), Merriweather
-    (description text).
-  - Logo: built into the file (also saved as logo.png).
 
-  WHERE TO CHANGE THINGS
-  - At the top of the file, inside <style>, the "DESIGN TOKENS" block holds
-    the colors (--bg, --dot, --panel, --green ...) and the fonts
-    (--f-head, --f-body, --f-ui, --f-mono, --f-serif). Change them there.
-  - To change the logo: replace the long data:image/png;base64,... text in
-    the <img> tag (and the page icon at the top) with your new image, or
-    point src to a file in the same folder, e.g. src="logo.png".
-  - Layout: the form() function in the script holds the form layout.
-    Change the col-md-* classes to resize fields.
-  - Fully offline use: download bootstrap.min.css, bootstrap.bundle.min.js,
-    the bootstrap-icons font and the Google Fonts files, keep them in the
-    same folder, and point the <link>/<script> tags at those files.
+---------------------------------------------------------------------
+ I. TROUBLESHOOTING
+---------------------------------------------------------------------
+  "Cannot reach the script, or it is the old version": wrong URL, access not
+     "Anyone", or you did not deploy a New version (section F). Each
+     deployment has its own URL; use the one you updated.
+  "Open Code.gs, change SETUP_CODE...": set your own SETUP_CODE (step B3),
+     save, deploy a new version.
+  "Wrong username or password" / "Too many wrong attempts": check spelling;
+     after 5 failures wait 10 minutes or ask an admin to reset the password.
+  "Your account is read-only": the role is viewer; an admin can change it.
+  Dropdowns empty / text box: add a dropdown rule to that column on row 3, or
+     fill the INDEX tab.
+  Grading Period / Month / Mode blank on a new row: the formulas do not reach
+     that row; fill them down in the sheet.
+  Pending CSV says no Pending rows: no row in that sheet has Status Pending.
+  Weekly Usage pop-up "Sheet not found": the error lists the tabs found; the
+     script accepts names like "Weekly Usage (Sections)".
+  "update Code.gs ... Unknown action": the script is older than the website;
+     deploy the new Code.gs as a New version.
+  Page looks plain (no styling): no internet for Bootstrap/fonts.
+
+
+---------------------------------------------------------------------
+ J. CHANGING THE LOOK / COLUMNS
+---------------------------------------------------------------------
+  Colors and fonts: the DESIGN TOKENS block at the top of the <style> in the
+  HTML (--green is #00B7CD, plus --bg, --panel, --dot and the --f-* fonts).
+  Logo: replace the base64 image in the <img> tag or point src to logo.png.
+
+  LOOK AND BEHAVIOUR (all in the one HTML file):
+   - Background: a still dot grid (20px, dots --dot on --bg). No script.
+   - Glass sheet switcher: /TEACHER CREATED /OER /AR /DATA OVERVIEW sit in a
+     glass pill (cyan active item). In Chrome and Edge the glass bends what is
+     behind it (SVG refraction, the <filter id="glassf"> at the top of the
+     page body); other browsers get a plain frosted glass.
+   - Cursor glow: a soft cyan spotlight follows the pointer inside the cards
+     and the glass pill, and the card border lights up. Look for the
+     "cursor spotlight" block in the script (colour: rgba(0,183,205,...) in the
+     CSS next to ".cardx::before").
+   - Usage Input header On/Off: the switch at the right of the header hides or
+     shows it (remembered in this browser).
+   - Fit: on a large enough window (about 1200px wide and 600px tall of
+     page area) the Form tab fills the window with no page scroll; the list on
+     the left scrolls inside. On a smaller window the page scrolls as usual.
+     Turn the Usage Input header Off to gain space.
+   - Credit and version in the footer: edit the CREDIT line in the script,
+        const CREDIT={name:'John Paul Romano',version:'1.0',built:'Nov 11, 2026'};
+     (also shown on the sign-in card).
+  If you add or move sheet columns, change the letters in BOTH Code.gs (CFG
+  block) and the HTML (SHEETS block), deploy a new version, refresh the page.
+  Good to know: the website does not delete rows (delete duplicates in the
+  sheet, or fix them with the pencil button). It cannot pull data from Moodle
+  by itself.
