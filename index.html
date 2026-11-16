@@ -1376,7 +1376,7 @@ $('rfr').onclick=async()=>{Object.keys(CACHE).forEach(k=>delete CACHE[k]);try{co
 /* ---------- credit / version (edit here) ---------- */
 const CREDIT={name:'John Paul Romano',version:'1.15',built:'Nov 14, 2026'};
 function paintCredit(){
-  $('ftL').innerHTML='Rocket Raccoon System · <b>v'+esc(CREDIT.version)+'</b> · static website built '+esc(CREDIT.built);
+  $('ftL').innerHTML='Rocket Raccoon System · <b>v'+esc(CREDIT.version)+'</b> · website built '+esc(CREDIT.built);
   $('ftR').innerHTML='Created by <b>'+esc(CREDIT.name)+'</b> · © '+esc(CREDIT.built.slice(-4));
   $('a_credit').textContent='Created by '+CREDIT.name+' · v'+CREDIT.version;
 }
