@@ -118,16 +118,19 @@ input[type=date]{color-scheme:dark}
 .form-select-sm,.form-control-sm{font-size:.8rem}
 
 /* searchable select (type-to-filter dropdown) */
-.ssel{position:relative}
+.ssel{position:relative;z-index:2}
+.ssel.open{z-index:50}
 .ssel-in{padding-right:2.1rem!important;cursor:text}
 .ssel-btn{position:absolute;right:2px;top:50%;transform:translateY(-50%);width:2rem;height:calc(100% - 4px);border:0;background:transparent;color:var(--mu);display:flex;align-items:center;justify-content:center;border-radius:7px;padding:0;cursor:pointer}
 .ssel-btn:hover{color:#fff;background:rgba(255,255,255,.06)}
 .ssel.open .ssel-btn{color:var(--green)}
-.ssel-menu{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:40;max-height:220px;overflow:auto;background:#0f1010;border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.55),0 0 0 1px rgba(0,183,205,.12);padding:4px}
-.ssel-opt{padding:.42rem .7rem;border-radius:7px;font:400 .85rem var(--f-body);color:var(--tx);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ssel-opt:hover,.ssel-opt.on{background:rgba(0,183,205,.16);color:#fff}
-.ssel-opt.muted{color:var(--mu);font-style:italic}
-.ssel-empty{padding:.55rem .7rem;font:400 .8rem var(--f-body);color:var(--mu)}
+/* portaled to body + fully opaque so Teacher/Grade/Subject/Section never show form text through */
+.ssel-menu{position:fixed;z-index:5000;max-height:min(240px,40vh);overflow:auto;background:#050606;border:1px solid #2b2f2d;border-radius:10px;box-shadow:0 20px 50px rgba(0,0,0,.95),0 0 0 1px rgba(0,183,205,.25);padding:4px;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;isolation:isolate;opacity:1;mix-blend-mode:normal;color:#e6e9e8}
+.ssel-menu::before{content:"";position:absolute;inset:0;border-radius:inherit;background:#050606;z-index:-1}
+.ssel-opt{position:relative;z-index:1;padding:.42rem .7rem;border-radius:7px;font:400 .85rem var(--f-body);color:#e6e9e8;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#050606}
+.ssel-opt:hover,.ssel-opt.on{background:#0a3a42;color:#fff}
+.ssel-opt.muted{color:var(--mu);font-style:italic;background:#050606}
+.ssel-empty{position:relative;z-index:1;padding:.55rem .7rem;font:400 .8rem var(--f-body);color:var(--mu);background:#050606}
 .ssel-in.is-invalid{border-color:var(--red)}
 #pane.fit .ssel-in{padding:.3rem .6rem;padding-right:1.9rem!important;font-size:.84rem}
 
@@ -289,6 +292,22 @@ body.fitting main.container-xl{padding-bottom:0!important}
 #pane.fit .fit-r{margin-bottom:0}
 /* non-fit: keep the titles list clearly above the credit bar */
 #dt{max-height:min(480px,calc(100vh - 380px))}
+/* list tabs (Pending / Done): table area grows with the window, never under the credit bar */
+#pt,#lt{max-height:min(520px,calc(100vh - 320px))}
+#pane.fit-list{
+  overflow:hidden;
+  display:flex;flex-direction:column;gap:.5rem;
+}
+#pane.fit-list>.cardx{
+  flex:1 1 auto;min-height:0;
+  display:flex;flex-direction:column;
+}
+#pane.fit-list>.cardx>.tbl-wrap,
+#pane.fit-list #pt,#pane.fit-list #lt{
+  flex:1 1 auto;min-height:0;
+  max-height:none!important;overflow:auto;
+}
+#pane.fit-list #pm{flex:0 0 auto;margin:0!important}
 </style>
 </head>
 <body>
@@ -496,7 +515,9 @@ function draw(){
   $('tb').querySelectorAll('button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;draw()});
   pbadge();
   tab==='form'?form():tab==='Pending'?pendingTab():tab==='stats'?statsTab():listTab();
-  buildGlass();if(tab==='form')fitPane();
+  buildGlass();
+  // fit after tab content is in the DOM (async tabs re-call fitPane when data lands)
+  requestAnimationFrame(()=>fitPane());
 }
 
 /* ---------- themed pop-ups (centered): confirm + small notices ---------- */
@@ -518,18 +539,13 @@ const tbar=t=>'<div class="tbar"><span class="dots"><b></b><b></b><b></b></span>
 
 /* ---------- form ---------- */
 function lbl(t,req){return '<label class="lab">'+t+(req?'<span class="req">*</span>':'')+'</label>'}
-/* only these columns get type-to-filter (per sheet) */
-const SEARCHABLE={
-  'Teacher Created':new Set(['J','Q']), /* CLE Digital Authoring Tool, Learning Activity/Strategy */
-  'OER':new Set(['K','O']),             /* OER Type, Learning Activity/Strategy */
-  'AR':new Set(['O'])                   /* Learning Activity/Strategy */
-};
-function isSearchable(col){return !!(SEARCHABLE[sheet]&&SEARCHABLE[sheet].has(col))}
+/* type-to-filter on every dropdown field (Date stays a normal date input) */
+function isSearchable(col){return col!=='C'}
 /* searchable select markup: type-to-filter while keeping dropdown pick */
 function sselHtml(id,options,extra,sm){
   const o=options||[];
   return '<div class="ssel">'
-   +'<input type="text" class="form-control ssel-in'+(sm?' form-control-sm':'')+'" id="'+id+'" autocomplete="off" placeholder="Type to filter…" role="combobox" aria-autocomplete="list" aria-expanded="false"'+(extra||'')+'>'
+   +'<input type="text" class="form-control ssel-in'+(sm?' form-control-sm':'')+'" id="'+id+'" autocomplete="off" placeholder="" role="combobox" aria-autocomplete="list" aria-expanded="false"'+(extra||'')+'>'
    +'<button type="button" class="ssel-btn" tabindex="-1" aria-label="Open list"><i class="bi bi-chevron-down"></i></button>'
    +'<div class="ssel-menu" hidden data-opts="'+esc(JSON.stringify([''].concat(o)))+'"></div>'
    +'</div>';
@@ -537,7 +553,7 @@ function sselHtml(id,options,extra,sm){
 function sel(col,label,req,extra,cls){
   const o=(opts[sheet][col]||[]);
   return '<div class="'+(cls||'col-md-6')+'">'+lbl(label,req)+(o.length
-    ?(isSearchable(col)?sselHtml('f_'+col,o,extra):'<select class="form-select" id="f_'+col+'"'+(extra||'')+'><option value=""></option>'+o.map(v=>'<option>'+esc(v)+'</option>').join('')+'</select>')
+    ?sselHtml('f_'+col,o,extra)
     :'<input class="form-control" id="f_'+col+'"'+(extra||'')+'>')+'</div>';
 }
 function initSsel(root){
@@ -547,9 +563,36 @@ function initSsel(root){
     if(!inp||!menu)return;
     let opts=[];try{opts=JSON.parse(menu.getAttribute('data-opts')||'[]')}catch(e){opts=['']}
     let hi=-1,open=false,committed=inp.value||'';
-    const close=()=>{open=false;wrap.classList.remove('open');menu.hidden=true;inp.setAttribute('aria-expanded','false');hi=-1};
+    const placeMenu=()=>{
+      const r=inp.getBoundingClientRect();
+      const maxH=Math.min(240,window.innerHeight*0.4);
+      const spaceBelow=window.innerHeight-r.bottom-8;
+      const spaceAbove=r.top-8;
+      const openUp=spaceBelow<120&&spaceAbove>spaceBelow;
+      const h=Math.min(maxH,openUp?spaceAbove:spaceBelow);
+      menu.style.width=Math.max(r.width,160)+'px';
+      menu.style.left=r.left+'px';
+      menu.style.maxHeight=Math.max(120,h)+'px';
+      if(openUp){
+        menu.style.top='auto';
+        menu.style.bottom=(window.innerHeight-r.top+4)+'px';
+      }else{
+        menu.style.bottom='auto';
+        menu.style.top=(r.bottom+4)+'px';
+      }
+    };
+    const close=()=>{
+      open=false;wrap.classList.remove('open');menu.hidden=true;inp.setAttribute('aria-expanded','false');hi=-1;
+      menu.style.top=menu.style.bottom=menu.style.left=menu.style.width='';
+      if(menu.parentElement!==wrap)wrap.appendChild(menu); // put back after portaling to body
+    };
     const closeOthers=()=>{document.querySelectorAll('.ssel.open').forEach(w=>{if(w!==wrap&&w._sselClose)w._sselClose()})};
-    const openMenu=()=>{closeOthers();open=true;wrap.classList.add('open');menu.hidden=false;inp.setAttribute('aria-expanded','true');render(inp.value)};
+    const openMenu=()=>{
+      closeOthers();open=true;wrap.classList.add('open');
+      // portal to body so glass/card transparency cannot show form fields through the list
+      if(menu.parentElement!==document.body)document.body.appendChild(menu);
+      menu.hidden=false;inp.setAttribute('aria-expanded','true');placeMenu();render(inp.value);
+    };
     wrap._sselClose=close;
     const setVal=(v,fire)=>{
       const nv=v==null?'':String(v);
@@ -570,6 +613,7 @@ function initSsel(root){
     };
     const render=q=>{
       const list=filtered(q);
+      if(open)placeMenu();
       if(!list.length){menu.innerHTML='<div class="ssel-empty">No matches</div>';hi=-1;return}
       if(hi>=list.length)hi=list.length-1;
       menu.innerHTML=list.map((v,i)=>'<div class="ssel-opt'+(v===''?' muted':'')+(i===hi?' on':'')+'" data-v="'+esc(v)+'" data-i="'+i+'">'+(v===''?'— empty —':esc(v))+'</div>').join('');
@@ -578,6 +622,10 @@ function initSsel(root){
       });
       const on=menu.querySelector('.ssel-opt.on');if(on)on.scrollIntoView({block:'nearest'});
     };
+    /* keep fixed menu aligned while the form column scrolls or the window resizes */
+    const onReposition=()=>{if(open)placeMenu()};
+    addEventListener('resize',onReposition);
+    addEventListener('scroll',onReposition,true);
     const commitHighlight=()=>{
       const list=filtered(inp.value);
       if(hi>=0&&hi<list.length){setVal(list[hi],true);close();return true}
@@ -799,20 +847,20 @@ async function submit(){
   $('sub').disabled=true;msg('Sending…','info');
   try{
     const d=await post({action:'add',rows:[e]});
-    addToCache(sheet,[e],d.from);
+    addToCache(sheet,[e],d.from,d.rows);
     $('f_'+t).value='';$('rq').value='';refLoad();
-    msg('✓ Entry added to '+sheet+' (row '+d.from+')','success');
+    msg('✓ Entry added to '+sheet+' (row '+(d.rows&&d.rows[0]!=null?d.rows[0]:d.from)+')','success');
   }catch(err){msg('Not sent: '+err.message,'danger')}
   $('sub').disabled=false;
 }
 
 /* ---------- Pending / Done ---------- */
 async function listTab(){
-  $('pane').innerHTML='<div class="input-group mb-3" style="max-width:360px"><span class="input-group-text" style="background:var(--ink);border-color:#2b2f2d;color:var(--mu)"><i class="bi bi-search"></i></span><input id="sr" class="form-control" placeholder="Search…"></div><div class="cardx"><div class="tbl-wrap" id="lt"><div class="foot">Loading…</div></div></div>';
+  $('pane').innerHTML='<div class="cardx"><div class="p-3 pb-2"><div class="input-group" style="max-width:360px"><span class="input-group-text" style="background:var(--ink);border-color:#2b2f2d;color:var(--mu)"><i class="bi bi-search"></i></span><input id="sr" class="form-control" placeholder="Search…"></div></div><div class="tbl-wrap" id="lt"><div class="foot">Loading…</div></div></div>';
   let rows=[];
   try{
     rows=(await getRows(sheet)).filter(r=>nz(r.status)===nz(tab));
-  }catch(err){$('lt').innerHTML='<div class="foot" style="color:var(--red)">'+esc(err.message)+'</div>';return}
+  }catch(err){$('lt').innerHTML='<div class="foot" style="color:var(--red)">'+esc(err.message)+'</div>';fitPane();return}
   const show=()=>{
     const k=$('sr').value.toLowerCase(),f=rows.filter(r=>!k||JSON.stringify(r).toLowerCase().includes(k));
     $('lt').innerHTML='<table class="table table-sm table-hover align-middle mb-0 text-nowrap"><thead><tr>'+(SHOWROW?'<th>#</th>':'')+'<th>Date</th><th>Teacher</th><th>Subject</th><th>Grade</th><th>Section</th><th>Title</th>'+(tab==='Pending'?'<th></th>':'')+'</tr></thead><tbody>'
@@ -826,6 +874,7 @@ async function listTab(){
     });
   };
   $('sr').oninput=show;show();
+  fitPane();
 }
 
 
@@ -843,10 +892,13 @@ async function getRows(s,force){
   const d=await api('list',{sheet:s,status:''});
   CACHE[s]={rows:d.rows,t:Date.now()};pbadge();return d.rows;
 }
-function addToCache(s,list,from){   // show new rows at once instead of reloading the whole sheet
+function addToCache(s,list,from,rowNums){   // show new rows at once instead of reloading the whole sheet
   const c=CACHE[s];if(!c)return;
   const tc=SHEETS[s].right[0][0],sc=SHEETS[s].right.find(x=>x[2]==='st')[0];
-  list.forEach((p,i)=>c.rows.unshift({row:from+i,c:Object.assign({},p),date:p.C||'',teacher:p.F||'',subject:p.G||'',grade:p.H||'',section:p.I||'',title:p[tc]||'',status:p[sc]||''}));
+  list.forEach((p,i)=>{
+    const row=(rowNums&&rowNums[i]!=null)?+rowNums[i]:from+i;
+    c.rows.unshift({row:row,c:Object.assign({},p),date:p.C||'',teacher:p.F||'',subject:p.G||'',grade:p.H||'',section:p.I||'',title:p[tc]||'',status:p[sc]||''});
+  });
   pbadge();
 }
 function pbadge(){const b=$('pbadge'),c=CACHE[sheet];if(!b)return;if(!c){b.hidden=true;return}b.textContent=c.rows.filter(r=>nz(r.status)==='pending').length;b.hidden=false}
@@ -870,11 +922,12 @@ async function pendingTab(){
    +'<button class="btn btn-dark2 btn-sm" id="pclr">Clear selection</button></div>'
    +'<div class="px-3 pb-2" id="pwarn"></div>'
    +'<div class="tbl-wrap" id="pt"><div class="foot">Loading…</div></div></div><div id="pm" class="mt-3"></div>';
-  try{await loadAll()}catch(err){$('pt').innerHTML='<div class="foot" style="color:var(--red)">'+esc(err.message)+'</div>';return}
+  try{await loadAll()}catch(err){$('pt').innerHTML='<div class="foot" style="color:var(--red)">'+esc(err.message)+'</div>';fitPane();return}
   pfill();
   $('pq').oninput=pshow;PF.forEach(f=>$('pf_'+f[0]).onchange=pshow);
   $('pdup').onclick=openDup;$('pdsel').onclick=()=>bulkDone(DUP.filter(r=>SEL.has(r.row)&&nz(r.status)==='pending'));$('pdall').onclick=()=>bulkDone(PROWS);$('pclr').onclick=()=>{SEL.clear();pshow()};
   pshow();
+  fitPane();
   const dg=allDupGroups();
   if(dg.length)openDupWarn(dg,'These titles are entered more than once in the same section. Delete the extra copy before you save or mark them done.');
 }
@@ -988,8 +1041,9 @@ function openDup(){
     try{
       const d=await post({action:'add',rows:rowsOut});
       const skipped=ents.length*Object.values(T).filter(t=>t.on).length-rowsOut.length;
-      M.hide();SEL.clear();addToCache(sheet,rowsOut,d.from);DUP=await getRows(sheet);pfill();pshow();
-      $('pm').innerHTML='<div class="alert alert-success py-2">✓ '+d.added+' cop'+(d.added===1?'y':'ies')+' saved to '+sheet+' (rows '+d.from+'–'+d.to+') with Usage = '+esc(nu)+'.'+(skipped>0?' Skipped '+skipped+' (same section or already entered).':'')+'</div>';
+      M.hide();SEL.clear();addToCache(sheet,rowsOut,d.from,d.rows);DUP=await getRows(sheet);pfill();pshow();
+      const rowLabel=d.rows&&d.rows.length?(d.rows.length===1?'row '+d.rows[0]:'rows '+d.rows.join(', ')):('rows '+d.from+'–'+d.to);
+      $('pm').innerHTML='<div class="alert alert-success py-2">✓ '+d.added+' cop'+(d.added===1?'y':'ies')+' saved to '+sheet+' ('+rowLabel+') with Usage = '+esc(nu)+'.'+(skipped>0?' Skipped '+skipped+' (same section or already entered).':'')+'</div>';
     }catch(err){$('d_m').innerHTML='<div class="alert alert-danger py-2">Not saved: '+esc(err.message)+'</div>';$('ds').disabled=false}
   };
   pv();
@@ -1223,8 +1277,7 @@ function edit(r,fromDup){
     if(type==='date')return '<div class="col-md-4">'+lbl(label)+'<input type="date" class="form-control" id="e_'+col+'" value="'+(/^\d{4}-\d{2}-\d{2}$/.test(v)?v:'')+'"></div>';
     if(!o.length||type==='text')return '<div class="'+(type==='text'?'col-12':'col-md-6')+'">'+lbl(label)+'<input class="form-control" id="e_'+col+'" value="'+esc(v)+'"></div>';
     if(v&&!o.includes(v))o.push(v);
-    if(isSearchable(col))return '<div class="col-md-6">'+lbl(label)+sselHtml('e_'+col,o)+'</div>';
-    return '<div class="col-md-6">'+lbl(label)+'<select class="form-select" id="e_'+col+'"><option value=""></option>'+o.map(x=>'<option'+(x===v?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select></div>';
+    return '<div class="col-md-6">'+lbl(label)+sselHtml('e_'+col,o)+'</div>';
   };
   const fields=[['C','Date','date'],...LEFT.map(x=>[x[0],x[1],'sel']),...R.filter(x=>x[0]!=='mode').map(x=>[x[0],x[1],x[2]])];
   $('mc').innerHTML='<div class="modal-header"><h5 class="modal-title">Edit row '+r.row+' · '+esc(sheet)+'</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>'
@@ -1321,7 +1374,7 @@ $('rfr').onclick=async()=>{Object.keys(CACHE).forEach(k=>delete CACHE[k]);try{co
 })();
 
 /* ---------- credit / version (edit here) ---------- */
-const CREDIT={name:'John Paul Romano',version:'1.0',built:'Nov 11, 2026'};
+const CREDIT={name:'John Paul Romano',version:'1.15',built:'Nov 14, 2026'};
 function paintCredit(){
   $('ftL').innerHTML='Rocket Raccoon System · <b>v'+esc(CREDIT.version)+'</b> · static website built '+esc(CREDIT.built);
   $('ftR').innerHTML='Created by <b>'+esc(CREDIT.name)+'</b> · © '+esc(CREDIT.built.slice(-4));
@@ -1339,47 +1392,66 @@ function heroSet(on,save){
 $('heroSw').onchange=()=>heroSet($('heroSw').checked,true);
 try{if(localStorage.getItem('usageHero')==='0')heroSet(false,false)}catch(e){}
 
-/* ---------- fit: form fills viewport above credit bar; resizes with any browser size change ---------- */
+/* ---------- fit: form + Pending/Done fill viewport above credit bar; resizes with browser ---------- */
 function fitPane(){
-  const p=$('pane');if(!p)return;
-  const dt=$('dt');
+  const p=$('pane');if(!p||$('app').hidden)return;
+  const dt=$('dt'),pt=$('pt'),lt=$('lt');
   const foot=($('ftr')&&$('ftr').offsetHeight)||30;
-  const gap=36; // clear air above the credit bar — same for every sheet and On/Off
+  const gap=36; // clear air above the credit bar — never overlap credits
 
-  // reset
-  p.classList.remove('fit');
+  // reset fit modes
+  p.classList.remove('fit','fit-list');
   p.style.height='';
   document.body.classList.remove('fitting');
   if(dt)dt.style.maxHeight='';
+  if(pt)pt.style.maxHeight='';
+  if(lt)lt.style.maxHeight='';
 
-  // titles list always tracks remaining viewport
-  if(dt){
-    const top=dt.getBoundingClientRect().top;
-    const avail=Math.max(160,Math.min(480,innerHeight-top-foot-gap));
-    dt.style.maxHeight=avail+'px';
-  }
+  if(PAGE||sheet==='overview')return;
 
-  if(!(tab==='form'&&!PAGE&&sheet!=='overview'&&innerWidth>=1200&&!$('app').hidden)){
-    document.body.classList.toggle('fitting',false);
+  /* size any table container to the space left above the credit bar */
+  const sizeTable=el=>{
+    if(!el)return;
+    const top=el.getBoundingClientRect().top;
+    const avail=Math.max(160,innerHeight-top-foot-gap);
+    el.style.maxHeight=avail+'px';
+  };
+
+  // form tab: full two-column fit on wide screens; otherwise size the titles list only
+  if(tab==='form'){
+    sizeTable(dt);
+    if(innerWidth>=1200){
+      window.scrollTo(0,0);
+      void p.offsetHeight;
+      const top=p.getBoundingClientRect().top;
+      const h=innerHeight-top-foot-gap;
+      if(h>=470){
+        p.style.height=h+'px';
+        p.classList.add('fit');
+        if(dt)dt.style.maxHeight=''; // grid 1fr owns height
+        document.body.classList.add('fitting');
+      }
+    }
     return;
   }
 
-  window.scrollTo(0,0);
-  void p.offsetHeight; // remeasure after hero On/Off, sheet change, or browser resize
-  const top=p.getBoundingClientRect().top;
-  const h=innerHeight-top-foot-gap;
-  if(h<470){
-    document.body.classList.toggle('fitting',false);
-    return;
+  // Pending / Done: stretch the data card + table to the credit bar
+  if(tab==='Pending'||tab==='Done'){
+    window.scrollTo(0,0);
+    void p.offsetHeight;
+    const top=p.getBoundingClientRect().top;
+    const h=innerHeight-top-foot-gap;
+    if(h>=280){
+      p.style.height=h+'px';
+      p.classList.add('fit-list');
+      document.body.classList.add('fitting');
+      // flex child owns height; clear any leftover maxHeight
+      if(pt)pt.style.maxHeight='';
+      if(lt)lt.style.maxHeight='';
+    }else{
+      sizeTable(pt||lt);
+    }
   }
-
-  // keep fit for Teacher Created, OER, and AR alike:
-  // right column scrolls inside the pane if the form is taller (e.g. Teacher Created)
-  p.style.height=h+'px';
-  p.classList.add('fit');
-  if(dt)dt.style.maxHeight=''; // grid 1fr owns height
-
-  document.body.classList.toggle('fitting',true);
 }
 // live resize: width stretch, height stretch, maximize, minimize
 let _rt;
@@ -1387,17 +1459,22 @@ addEventListener('resize',()=>{
   clearTimeout(_rt);
   _rt=setTimeout(()=>{fitPane();buildGlass()},60);
 });
-// also react while the user is still dragging the window edge
+// light immediate update while the user is still dragging the window edge
 addEventListener('resize',()=>{
-  if(tab==='form'&&!PAGE&&$('pane')){
-    // light immediate update of list height while dragging
-    const dt=$('dt'),p=$('pane');
-    if(!p||!dt||p.classList.contains('fit'))return;
-    const foot=($('ftr')&&$('ftr').offsetHeight)||30;
-    const top=dt.getBoundingClientRect().top;
-    const avail=Math.max(160,Math.min(480,innerHeight-top-foot-36));
-    dt.style.maxHeight=avail+'px';
+  if(PAGE||$('app').hidden||!$('pane'))return;
+  const foot=($('ftr')&&$('ftr').offsetHeight)||30;
+  const gap=36;
+  const p=$('pane');
+  if(p.classList.contains('fit')||p.classList.contains('fit-list')){
+    const top=p.getBoundingClientRect().top;
+    const h=innerHeight-top-foot-gap;
+    if(h>0)p.style.height=h+'px';
+    return;
   }
+  const el=$('dt')||$('pt')||$('lt');
+  if(!el)return;
+  const top=el.getBoundingClientRect().top;
+  el.style.maxHeight=Math.max(160,innerHeight-top-foot-gap)+'px';
 },{passive:true});
 
 /* ---------- glass surface for the sheet switcher (liquid-glass refraction like React Bits "Glass Surface"; Chrome / Edge) ---------- */
