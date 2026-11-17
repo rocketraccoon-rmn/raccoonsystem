@@ -45,7 +45,7 @@ input[type=date]{color-scheme:dark}
 .navbar{
   background:linear-gradient(180deg,rgba(12,14,14,.72),rgba(10,11,11,.55));
   border-bottom:1px solid rgba(255,255,255,.06);
-  padding:.7rem 0;position:relative;
+  padding:.7rem 0;position:relative;z-index:1030;   /* keep the Data Overview / account dropdowns above the cards below */
   -webkit-backdrop-filter:blur(14px) saturate(1.4);
   backdrop-filter:blur(14px) saturate(1.4);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 8px 28px rgba(0,0,0,.28);
@@ -220,12 +220,8 @@ tr.sel>*{--bs-table-bg-type:rgba(0,183,205,.09)}
 /* usage input header on/off */
 .hero-bar{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}
 .hero.off{padding:.35rem 0 .1rem}.hero.off .hero-body{display:none}
-.hero-mini{display:none;font:500 .72rem var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mu)}
-.hero.off .hero-mini{display:inline}
-.hero-sw{display:flex;align-items:center;gap:.55rem;margin:0;padding:.3rem .8rem;border:1px solid var(--line);border-radius:999px;background:rgba(15,16,16,.6);font:500 .7rem var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mu);cursor:pointer;white-space:nowrap}
+.hero-sw{display:flex;align-items:center;gap:.55rem;margin:0 0 0 auto;padding:.3rem .8rem;border:1px solid var(--line);border-radius:999px;background:rgba(15,16,16,.6);font:500 .7rem var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mu);cursor:pointer;white-space:nowrap}
 .hero-sw .form-check-input{margin:0;float:none;cursor:pointer}
-.hero-sw b{color:var(--green);min-width:2.2em;display:inline-block}
-.hero.off .hero-sw b{color:var(--mu)}
 /* footer credit */
 .ftr{position:fixed;left:0;right:0;bottom:0;height:30px;display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:0 1.4rem;
   font:400 .68rem var(--f-mono);letter-spacing:.04em;color:var(--mu);background:rgba(8,9,9,.82);border-top:1px solid var(--line);z-index:900}
@@ -359,8 +355,7 @@ body.fitting main.container-xl{padding-bottom:0!important}
       <div class="sub" id="hs">Teacher Created // data entry</div>
       <p>Record a new usage entry, and check whether a title was already entered before you submit.</p>
     </div>
-    <span class="hero-mini">Usage Input</span>
-    <label class="hero-sw" title="Show or hide the Usage Input header"><span>Usage Input</span><input class="form-check-input form-switch" type="checkbox" role="switch" id="heroSw" checked><b id="heroLb">On</b></label>
+    <label class="hero-sw" title="Show or hide the header"><input class="form-check-input form-switch" type="checkbox" role="switch" id="heroSw" aria-label="Show or hide the header" checked></label>
   </div>
 </header>
 
@@ -996,8 +991,13 @@ function openDup(){
    +'<div class="alert alert-info py-2 mb-3"><i class="bi bi-info-circle me-1"></i>Each copy is saved with <b>Usage = '+esc(nu)+'</b>. The originals are not changed.</div>'
    +'<div class="row g-3 mb-3"><div class="col-md-6">'+lbl('Status of the copies')+'<select class="form-select" id="d_st">'+stOpts.map(v=>'<option'+(nz(v)==='pending'?' selected':'')+'>'+esc(v)+'</option>').join('')+'</select></div>'
    +'<div class="col-md-6">'+lbl('Date of the copies (empty = keep each date)')+'<input type="date" class="form-control" id="d_dt"></div></div>'
-   +'<div class="d-flex align-items-end gap-2 mb-2"><div class="flex-grow-1">'+lbl('Copy to these sections (pick the grade of each)')+'<input type="text" class="form-control form-control-sm" id="d_q" placeholder="Search section…"></div></div>'
-   +'<div class="sec-list mb-3" id="d_l">'+secs.map(s=>'<div class="d-flex align-items-center gap-2 py-1" data-sr="'+esc(s)+'" style="border-bottom:1px solid #1d2020"><div class="form-check flex-grow-1 mb-0"><input class="form-check-input" type="checkbox" data-s="'+esc(s)+'"><label class="form-check-label small">'+esc(s)+'</label></div>'+gsel(s)+'</div>').join('')+'</div>'
+   +'<div class="mb-2">'+lbl('Copy to these sections (pick the grade of each)')
+   +'<div class="input-group input-group-sm mb-2"><span class="input-group-text"><i class="bi bi-search"></i></span><input type="text" class="form-control" id="d_q" placeholder="Type to search a section…" autocomplete="off"><button type="button" class="btn btn-dark2" id="d_qx" title="Clear search" style="display:none"><i class="bi bi-x-lg"></i></button></div>'
+   +'<div class="d-flex align-items-center gap-2 flex-wrap"><span class="small text-body-secondary me-auto" id="d_cnt"></span>'
+   +'<div class="form-check form-switch mb-0 small"><input class="form-check-input" type="checkbox" id="d_only"><label class="form-check-label" for="d_only">Ticked only</label></div>'
+   +'<button type="button" class="btn btn-dark2 btn-sm py-0" id="d_all">Tick all shown</button>'
+   +'<button type="button" class="btn btn-dark2 btn-sm py-0" id="d_none">Untick all</button></div></div>'
+   +'<div class="sec-list mb-3" id="d_l">'+secs.map(s=>'<div class="d-flex align-items-center gap-2 py-1" data-sr="'+esc(s)+'" style="border-bottom:1px solid #1d2020"><div class="form-check flex-grow-1 mb-0"><input class="form-check-input" type="checkbox" data-s="'+esc(s)+'"><label class="form-check-label small">'+esc(s)+'</label></div>'+gsel(s)+'</div>').join('')+'<div class="foot" id="d_empty" style="display:none">No section matches your search.</div></div>'
    +'<div class="lab">Preview</div><div class="tbl-wrap" id="d_p" style="border:1px solid var(--line);border-radius:10px;max-height:260px"></div><div id="d_m" class="mt-3"></div></div>'
    +'<div class="modal-footer"><button class="btn btn-dark2" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" id="ds" disabled><i class="bi bi-save me-1"></i>Save copies</button></div>';
   const M=bootstrap.Modal.getOrCreateInstance($('mdl'));M.show();
@@ -1027,7 +1027,29 @@ function openDup(){
   $('d_l').querySelectorAll('[data-s]').forEach(c=>c.onchange=()=>{T[c.dataset.s].on=c.checked;pv()});
   $('d_l').querySelectorAll('[data-g]').forEach(c=>c.onchange=c.oninput=()=>{T[c.dataset.g].grade=c.value;pv()});
   $('d_st').onchange=$('d_dt').onchange=pv;
-  $('d_q').oninput=()=>{const k=nz($('d_q').value);$('d_l').querySelectorAll('[data-sr]').forEach(r=>r.style.display=!k||nz(r.dataset.sr).includes(k)?'':'none')};
+  const rowsEl=[...$('d_l').querySelectorAll('[data-sr]')];
+  const setVis=(el,on)=>{if(on)el.style.removeProperty('display');else el.style.setProperty('display','none','important')};   // d-flex uses !important, so plain style.display cannot hide it
+  const dfilter=()=>{
+    const q=$('d_q').value,toks=nz(q).split(' ').filter(Boolean),only=$('d_only').checked;let shown=0,ticked=0;
+    rowsEl.forEach(r=>{
+      const name=nz(r.dataset.sr),on=T[r.dataset.sr].on;if(on)ticked++;
+      const vis=toks.every(t=>name.includes(t))&&(!only||on);
+      setVis(r,vis);if(vis)shown++;
+    });
+    setVis($('d_empty'),shown===0);
+    $('d_qx').style.display=q?'':'none';
+    $('d_cnt').textContent=shown+' of '+rowsEl.length+' section'+(rowsEl.length===1?'':'s')+' shown · '+ticked+' ticked';
+  };
+  const dsync=()=>{rowsEl.forEach(r=>{r.querySelector('[data-s]').checked=T[r.dataset.sr].on})};
+  $('d_q').oninput=dfilter;
+  $('d_q').onkeydown=e=>{if(e.key==='Escape'&&$('d_q').value){e.stopPropagation();$('d_q').value='';dfilter()}else if(e.key==='Enter'){e.preventDefault();const f=rowsEl.find(r=>r.style.display!=='none');if(f){const c=f.querySelector('[data-s]');c.checked=!c.checked;c.onchange()}}};
+  $('d_qx').onclick=()=>{$('d_q').value='';dfilter();$('d_q').focus()};
+  $('d_only').onchange=dfilter;
+  $('d_all').onclick=()=>{rowsEl.forEach(r=>{if(r.style.display!=='none')T[r.dataset.sr].on=true});dsync();dfilter();pv()};
+  $('d_none').onclick=()=>{rowsEl.forEach(r=>{T[r.dataset.sr].on=false});dsync();dfilter();pv()};
+  rowsEl.forEach(r=>{const c=r.querySelector('[data-s]'),prev=c.onchange;c.onchange=()=>{prev();dfilter()}});
+  rowsEl.forEach(r=>{const lb=r.querySelector('label');lb.style.cursor='pointer';lb.onclick=()=>{const c=r.querySelector('[data-s]');c.checked=!c.checked;c.onchange()}});
+  dfilter();
   $('ds').onclick=async()=>{
     const tc=SHEETS[sheet].right[0][0],seen=new Set();
     for(const p of rowsOut){
@@ -1374,7 +1396,7 @@ $('rfr').onclick=async()=>{Object.keys(CACHE).forEach(k=>delete CACHE[k]);try{co
 })();
 
 /* ---------- credit / version (edit here) ---------- */
-const CREDIT={name:'John Paul Romano',version:'1.15',built:'Nov 14, 2026'};
+const CREDIT={name:'John Paul Romano',version:'1.17',built:'17/11/2026'};
 function paintCredit(){
   $('ftL').innerHTML='Rocket Raccoon System · <b>v'+esc(CREDIT.version)+'</b> · website built '+esc(CREDIT.built);
   $('ftR').innerHTML='Created by <b>'+esc(CREDIT.name)+'</b> · © '+esc(CREDIT.built.slice(-4));
@@ -1384,7 +1406,7 @@ paintCredit();
 
 /* ---------- Usage Input header on / off ---------- */
 function heroSet(on,save){
-  $('hero').classList.toggle('off',!on);$('heroSw').checked=on;$('heroLb').textContent=on?'On':'Off';
+  $('hero').classList.toggle('off',!on);$('heroSw').checked=on;
   if(save){try{localStorage.setItem('usageHero',on?'1':'0')}catch(e){}}
   // re-measure after hero height changes so fit works for both On and Off
   requestAnimationFrame(()=>{fitPane();requestAnimationFrame(fitPane)});
