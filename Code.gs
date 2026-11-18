@@ -242,7 +242,7 @@ function route_(d) {
       });
       try { cch.put('meta', JSON.stringify(base), 600); } catch (e) {}
     }
-    const out = { ok: true, options: base.options, weekStart: base.weekStart, user: pub_(u) };
+    const out = { ok: true, options: base.options, weekStart: base.weekStart, user: pub_(u), title: ss.getName() };
     if (u.role === 'admin') out.reqCount = pendingRequests_().length;
     return out;
   }

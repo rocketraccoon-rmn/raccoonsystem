@@ -186,6 +186,8 @@ tr.sel>*{--bs-table-bg-type:rgba(0,183,205,.09)}
 .tabrow{display:flex;align-items:flex-end;flex-wrap:wrap;gap:.5rem;border-bottom:1px solid var(--line);margin-bottom:1.5rem}
 .tabrow .nav-tabs{border-bottom:0;flex:1 1 auto}
 .tabrow .btn{margin-bottom:.4rem}
+.ss-title{align-self:center;margin-bottom:.4rem;min-width:0;max-width:min(36ch,34vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:500 .72rem var(--f-mono);letter-spacing:.03em;color:var(--mu);padding:.3rem .65rem;border:1px solid var(--line);border-radius:8px;background:#0b0c0c}
+.ss-title i{color:var(--green);margin-right:.4rem}
 .dropdown-menu{--bs-dropdown-bg:#111;--bs-dropdown-border-color:var(--line);--bs-dropdown-link-hover-bg:#1b1e1e;font-size:.85rem}
 .heat th:first-child,.heat td:first-child{position:sticky;left:0;background:#0b0c0c;z-index:2}
 .heat td{text-align:center}
@@ -361,7 +363,7 @@ body.fitting main.container-xl{padding-bottom:0!important}
 
 <main class="container-xl pb-5">
   <div class="tabrow" id="tabrow"><ul class="nav nav-tabs" id="tb"></ul>
-    <div class="ms-auto d-flex gap-2 pb-1"><button class="btn btn-dark2 btn-sm" id="rowt" title="Show / hide row numbers"><i class="bi bi-hash"></i> Row</button><button class="btn btn-dark2 btn-sm" id="rfr" title="Reload the data from the Google Sheet"><i class="bi bi-arrow-clockwise"></i></button><button class="btn btn-dark2 btn-sm" id="csv" title="Downloads only the Pending rows, in the TCUPLOAD / OERUPLOAD / ARUPLOAD format"><i class="bi bi-download me-1"></i>CSV</button></div></div>
+    <div class="ms-auto d-flex gap-2 pb-1"><span class="ss-title" id="ssT" hidden></span><button class="btn btn-dark2 btn-sm" id="rowt" title="Show / hide row numbers"><i class="bi bi-hash"></i> Row</button><button class="btn btn-dark2 btn-sm" id="rfr" title="Reload the data from the Google Sheet"><i class="bi bi-arrow-clockwise"></i></button><button class="btn btn-dark2 btn-sm" id="csv" title="Downloads only the Pending rows, in the TCUPLOAD / OERUPLOAD / ARUPLOAD format"><i class="bi bi-download me-1"></i>CSV</button></div></div>
   <div id="pane"></div>
 </main>
 <footer class="ftr" id="ftr"><span id="ftL"></span><span id="ftR"></span></footer>
@@ -383,7 +385,7 @@ const FILT=[['teacher','Teacher'],['subject','Subject'],['grade','Grade'],['sect
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 const nz=s=>String(s==null?'':s).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-let PAGE='',SHOWROW=false,url='',sheet='Teacher Created',tab='form',opts=null,DUP=[],TOKEN='',USER=null,WEEK0='2026-06-08';
+let SSTITLE='',PAGE='',SHOWROW=false,url='',sheet='Teacher Created',tab='form',opts=null,DUP=[],TOKEN='',USER=null,WEEK0='2026-06-08';
 try{$('u').value=localStorage.getItem('usageUrl')||''}catch(e){}
 
 /* cursor-following border glow */
@@ -417,8 +419,10 @@ function showApp(d){
   $('auth').hidden=true;$('app').hidden=false;
   $('um').innerHTML='<i class="bi bi-person-circle me-1"></i>'+esc(USER.name)+' · '+USER.role+(d&&d.reqCount?'<span class="badge text-bg-danger ms-2">'+d.reqCount+'</span>':'');
   $('acc').parentElement.hidden=USER.role!=='admin';
+  if(d&&d.title)SSTITLE=d.title;   // Google Sheet file name, sent by the script (kept if a later reply lacks it)
+  const st=$('ssT');st.hidden=!SSTITLE;if(SSTITLE){st.innerHTML='<i class="bi bi-file-earmark-spreadsheet"></i>'+esc(SSTITLE);st.title='Google Sheet: '+SSTITLE}
 }
-function saveMeta(d){try{sessionStorage.setItem('usageMeta',JSON.stringify({user:d.user,options:d.options,weekStart:d.weekStart,reqCount:d.reqCount||0}))}catch(e){}}
+function saveMeta(d){try{sessionStorage.setItem('usageMeta',JSON.stringify({user:d.user,options:d.options,weekStart:d.weekStart,reqCount:d.reqCount||0,title:d.title||''}))}catch(e){}}
 async function start(){
   const d=await api('meta');opts=d.options;USER=d.user;WEEK0=d.weekStart||WEEK0;saveMeta(d);
   if(PAGE==='accounts'&&USER.role!=='admin')PAGE='';
@@ -1396,9 +1400,9 @@ $('rfr').onclick=async()=>{Object.keys(CACHE).forEach(k=>delete CACHE[k]);try{co
 })();
 
 /* ---------- credit / version (edit here) ---------- */
-const CREDIT={name:'John Paul Romano',version:'1.17',built:'17/11/2026'};
+const CREDIT={name:'John Paul Romano',version:'1.18',built:'11/18/2026'};
 function paintCredit(){
-  $('ftL').innerHTML='Rocket Raccoon System · <b>v'+esc(CREDIT.version)+'</b> · website built '+esc(CREDIT.built);
+  $('ftL').innerHTML='Rocket Raccoon System · <b>v'+esc(CREDIT.version)+'</b> · system built '+esc(CREDIT.built);
   $('ftR').innerHTML='Created by <b>'+esc(CREDIT.name)+'</b> · © '+esc(CREDIT.built.slice(-4));
   $('a_credit').textContent='Created by '+CREDIT.name+' · v'+CREDIT.version;
 }
