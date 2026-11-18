@@ -4,7 +4,7 @@
  * Deploy > New deployment (Web app, Execute as: Me, Who has access: Anyone)
  * or, for an existing deployment: Deploy > Manage deployments > pencil > New version.
  */
-const SETUP_CODE = 'raccoon2026';
+const SETUP_CODE = 'romano'; // CHANGE THIS before the first use. It is needed once, to create the first admin account.
 const SESSION_HOURS = 12, REMEMBER_DAYS = 7;
 
 const CFG = {
