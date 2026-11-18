@@ -59,7 +59,7 @@ function request_(d) {   // public: someone asks for an account; an admin approv
   cache.put('reqn', String(n + 1), 3600);
   return { ok: true };
 }
-const WRITE = { add: 1, status: 1, update: 1, setup: 1, createUser: 1, updateUser: 1, deleteUser: 1, changePassword: 1, request: 1, approveRequest: 1, rejectRequest: 1, statusMany: 1, deleteRow: 1 };
+const WRITE = { add: 1, status: 1, update: 1, setup: 1, createUser: 1, updateUser: 1, deleteUser: 1, changePassword: 1, request: 1, approveRequest: 1, rejectRequest: 1, statusMany: 1, deleteRow: 1, delete: 1 };
 const BUST = { changePassword: 1, createUser: 1, updateUser: 1, deleteUser: 1, approveRequest: 1, setup: 1 };
 function now_() { return Utilities.formatDate(new Date(), SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(), 'yyyy-MM-dd HH:mm'); }
 
@@ -72,6 +72,31 @@ function nextRow_(sh, keys) {
     for (let i = v.length - 1; i >= 0; i--) if (String(v[i][0]).trim() !== '') { last = Math.max(last, i + 3); break; }
   });
   return last + 1;
+}
+/* Prefer the lowest vacant rows (gaps left after a delete/clear). A row is vacant when every key column is empty.
+   If there are not enough gaps, append after the last used row. Returns exactly `need` row numbers. */
+function findSlots_(sh, keys, need) {
+  need = Math.max(0, Number(need) || 0);
+  if (!need) return [];
+  const n = Math.max(sh.getMaxRows() - 2, 1);
+  const keyNums = keys.map(colNum_);
+  const startCol = Math.min.apply(null, keyNums);
+  const width = Math.max.apply(null, keyNums) - startCol + 1;
+  const keyIdx = keyNums.map(function (c) { return c - startCol; });
+  const data = n > 0 ? sh.getRange(3, startCol, n, width).getValues() : [];
+  const vacant = [];
+  let lastUsed = 2;
+  for (let i = 0; i < data.length; i++) {
+    const empty = keyIdx.every(function (j) { return String(data[i][j] == null ? '' : data[i][j]).trim() === ''; });
+    if (empty) {
+      if (vacant.length < need) vacant.push(i + 3);
+    } else {
+      lastUsed = i + 3;
+    }
+  }
+  let next = lastUsed + 1;
+  while (vacant.length < need) vacant.push(next++);
+  return vacant;
 }
 function options_(ss, sh, cfg, L, ix) {
   try {
@@ -307,6 +332,15 @@ function route_(d) {
   if (a === 'csv') { const c = csv_(ss, d.sheet); c.ok = true; return c; }
   if (!canWrite) return { ok: false, error: 'Your account is read-only.' };
 
+  if (a === 'delete' || a === 'deleteRow') {
+    // Clear the row so it becomes a vacant slot that the next add can reuse.
+    // Do not shift other rows (UPLOAD row numbers stay aligned with source rows).
+    const row = Number(d.row);
+    if (row < 3 || row !== Math.floor(row)) return { ok: false, error: 'Invalid row' };
+    if (row > sh.getMaxRows()) return { ok: false, error: 'Row out of range.' };
+    cfg.cols.split('').forEach(function (L) { sh.getRange(L + row).clearContent(); });
+    return { ok: true };
+  }
   if (a === 'status' || a === 'update') {
     const row = Number(d.row);
     if (row < 3 || !String(sh.getRange(cfg.title + row).getValue()).trim() && !String(sh.getRange('F' + row).getValue()).trim()) return { ok: false, error: 'Invalid row' };
@@ -338,19 +372,29 @@ function route_(d) {
     return { ok: true, updated: rows, skipped: want.length - rows.length };
   }
   if (a === 'add') {
+    // Fill vacant (cleared) rows first, then append after the last used row.
     const rows = d.rows || []; if (!rows.length) return { ok: false, error: 'No entries received' };
-    const start = nextRow_(sh, cfg.keys);
-    if (start + rows.length - 1 > sh.getMaxRows()) sh.insertRowsAfter(sh.getMaxRows(), start + rows.length - 1 - sh.getMaxRows());
-    cfg.cols.split('').forEach(function (L) {   // one write per column (not per cell); only the input columns
-      const vals = rows.map(function (r) {
-        const v = r[L] == null ? '' : String(r[L]).trim();
-        if (L === 'C' && /^\d{4}-\d{2}-\d{2}$/.test(v)) { return [Utilities.parseDate(v, ss.getSpreadsheetTimeZone(), 'yyyy-MM-dd')]; }
-        return [v];
+    const slots = findSlots_(sh, cfg.keys, rows.length);
+    const maxSlot = slots[slots.length - 1];
+    if (maxSlot > sh.getMaxRows()) sh.insertRowsAfter(sh.getMaxRows(), maxSlot - sh.getMaxRows());
+    // Write in contiguous runs so one setValues per column per run (same efficiency as before when no gaps).
+    for (let i = 0; i < slots.length;) {
+      let j = i;
+      while (j + 1 < slots.length && slots[j + 1] === slots[j] + 1) j++;
+      const runStart = slots[i], runLen = j - i + 1;
+      cfg.cols.split('').forEach(function (L) {
+        const vals = [];
+        for (let k = i; k <= j; k++) {
+          const v = rows[k][L] == null ? '' : String(rows[k][L]).trim();
+          if (L === 'C' && /^\d{4}-\d{2}-\d{2}$/.test(v)) vals.push([Utilities.parseDate(v, ss.getSpreadsheetTimeZone(), 'yyyy-MM-dd')]);
+          else vals.push([v]);
+        }
+        if (vals.every(function (x) { return x[0] === ''; })) return;
+        sh.getRange(runStart, colNum_(L), runLen, 1).setValues(vals);
       });
-      if (vals.every(function (x) { return x[0] === ''; })) return;
-      sh.getRange(start, colNum_(L), rows.length, 1).setValues(vals);
-    });
-    return { ok: true, added: rows.length, from: start, to: start + rows.length - 1 };
+      i = j + 1;
+    }
+    return { ok: true, added: rows.length, rows: slots, from: slots[0], to: slots[slots.length - 1] };
   }
   return { ok: false, error: 'Unknown action' };
 }
